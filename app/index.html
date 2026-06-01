@@ -1,0 +1,661 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DevisIA — Créer un devis</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            orange: { 500: '#e75a1f', 600: '#c94d18', 50: '#fff4ef' },
+            ink: '#1a1a1a', paper: '#f9f9f7', chalk: '#f0efeb',
+            muted: '#6b7280', line: '#e5e5e0',
+          },
+          fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'] }
+        }
+      }
+    }
+  </script>
+  <style>
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Inter', sans-serif; background: #f9f9f7; color: #1a1a1a; -webkit-font-smoothing: antialiased; }
+    textarea:focus, input:focus { outline: none; }
+    .card { background: white; border: 1px solid #e5e5e0; border-radius: 12px; }
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+  </style>
+</head>
+<body class="min-h-screen">
+
+  <!-- CONFIGURATION SUPABASE — remplacez après création du projet -->
+  <script>
+    const SUPABASE_URL = 'https://hrspewkevantgmgnhksz.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhyc3Bld2tldmFudGdtZ25oa3N6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk2MjUwNDYsImV4cCI6MjA5NTIwMTA0Nn0.jcu_MSOo1CK4sBGYtUyTCXo5gPv6QKmwiFBTShBJlpY';
+    const supabaseConfigured = SUPABASE_URL !== 'VOTRE_SUPABASE_URL';
+    const sb = supabaseConfigured ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+  </script>
+
+  <!-- MODAL AUTH -->
+  <div id="modal-auth" class="modal-overlay hidden">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 relative">
+      <button onclick="fermerModal()" class="absolute top-4 right-4 text-muted hover:text-ink transition">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+      <div class="flex border-b border-line mb-5">
+        <button id="tab-connexion" onclick="basculerOnglet('connexion')" class="flex-1 pb-3 text-sm font-semibold text-orange-500 border-b-2 border-orange-500">Se connecter</button>
+        <button id="tab-inscription" onclick="basculerOnglet('inscription')" class="flex-1 pb-3 text-sm font-medium text-muted">Créer un compte</button>
+      </div>
+      <div class="flex items-center gap-2 mb-5">
+        <div class="w-7 h-7 bg-orange-500 rounded-lg flex items-center justify-center"><span class="text-white font-bold text-xs">D</span></div>
+        <span class="font-semibold text-ink">DevisIA</span>
+      </div>
+      <p id="auth-titre" class="text-lg font-bold text-ink mb-4">Connexion</p>
+      <form id="form-auth" onsubmit="soumettreAuth(event)" class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-ink mb-1">Email</label>
+          <input id="auth-email" type="email" required placeholder="vous@example.fr"
+            class="w-full border border-line rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-ink mb-1">Mot de passe</label>
+          <input id="auth-mdp" type="password" required placeholder="••••••••" minlength="6"
+            class="w-full border border-line rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition" />
+        </div>
+        <div id="auth-erreur" class="hidden text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg"></div>
+        <button type="submit" id="btn-auth"
+          class="w-full py-2.5 bg-orange-500 text-white rounded-lg font-semibold text-sm hover:bg-orange-600 transition">Se connecter</button>
+      </form>
+      <p id="auth-alt" class="text-xs text-center text-muted mt-4">
+        Pas encore de compte ? <button onclick="basculerOnglet('inscription')" class="text-orange-500 hover:underline">Créer un compte</button>
+      </p>
+    </div>
+  </div>
+
+  <!-- HEADER -->
+  <header class="sticky top-0 z-50 bg-white border-b border-line">
+    <div class="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
+      <a href="index.html" class="flex items-center gap-2">
+        <div class="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center"><span class="text-white font-bold text-sm">D</span></div>
+        <span class="font-semibold text-ink">DevisIA</span>
+      </a>
+      <div class="flex items-center gap-3">
+        <button onclick="recommencer()" id="btn-recommencer" class="hidden text-sm text-muted hover:text-ink transition-colors">← Nouveau devis</button>
+        <div class="relative" id="menu-compte-wrapper">
+          <button id="btn-compte" onclick="gererCompte()" class="flex items-center gap-1.5 text-sm font-medium text-orange-500 hover:text-orange-600 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+            <span id="label-compte">Mon compte</span>
+          </button>
+          <div id="dropdown-compte" class="hidden absolute right-0 top-8 w-48 bg-white border border-line rounded-xl shadow-lg py-1 z-50">
+            <div class="px-3 py-2 border-b border-line"><p id="user-email-display" class="text-xs text-muted truncate"></p></div>
+            <a href="historique.html" class="flex items-center gap-2 px-3 py-2 text-sm text-ink hover:bg-chalk transition">
+              <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+              Mes devis
+            </a>
+            <button onclick="seDeconnecter()" class="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+              Déconnexion
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- PROGRESS -->
+  <div class="bg-white border-b border-line">
+    <div class="max-w-3xl mx-auto px-4 py-3">
+      <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2">
+          <div id="step1-dot" class="w-6 h-6 rounded-full bg-orange-500 flex items-center justify-center flex-shrink-0"><span class="text-white text-xs font-semibold">1</span></div>
+          <span id="step1-label" class="text-sm font-medium text-ink">Saisie</span>
+        </div>
+        <div class="flex-1 h-0.5 bg-line mx-1"></div>
+        <div class="flex items-center gap-2">
+          <div id="step2-dot" class="w-6 h-6 rounded-full bg-line flex items-center justify-center flex-shrink-0"><span class="text-muted text-xs font-semibold">2</span></div>
+          <span id="step2-label" class="text-sm text-muted">Génération</span>
+        </div>
+        <div class="flex-1 h-0.5 bg-line mx-1"></div>
+        <div class="flex items-center gap-2">
+          <div id="step3-dot" class="w-6 h-6 rounded-full bg-line flex items-center justify-center flex-shrink-0"><span class="text-muted text-xs font-semibold">3</span></div>
+          <span id="step3-label" class="text-sm text-muted">Votre devis</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FORMULAIRE -->
+  <main id="section-formulaire" class="max-w-3xl mx-auto px-4 py-8 space-y-6">
+    <div>
+      <h1 class="text-2xl font-bold text-ink">Créer un devis</h1>
+      <p class="text-muted mt-1">Décrivez votre chantier en quelques mots. L'IA s'occupe du reste.</p>
+    </div>
+
+    <!-- PROFIL ARTISAN -->
+    <div class="card p-6 space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 class="font-semibold text-ink">Vos informations</h2>
+        <span id="badge-sync" class="text-xs text-muted bg-chalk px-2 py-1 rounded-full">Mémorisées sur cet appareil</span>
+      </div>
+      <!-- Logo -->
+      <div>
+        <label class="block text-sm font-medium text-ink mb-2">Logo <span class="text-muted font-normal">(optionnel)</span></label>
+        <div class="flex items-center gap-4">
+          <div id="logo-preview" class="w-16 h-16 rounded-lg border-2 border-dashed border-line bg-chalk flex items-center justify-center overflow-hidden">
+            <svg class="w-6 h-6 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          </div>
+          <div>
+            <label for="logo-input" class="cursor-pointer text-sm font-medium text-orange-500 hover:text-orange-600 transition">Choisir une image</label>
+            <input id="logo-input" type="file" accept="image/*" class="hidden" onchange="chargerLogo(event)" />
+            <p class="text-xs text-muted mt-1">PNG, JPG — max 500 Ko</p>
+            <button id="btn-suppr-logo" onclick="supprimerLogo()" class="hidden text-xs text-red-500 hover:text-red-700 mt-1 transition">Supprimer</button>
+          </div>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-ink mb-1">Prénom</label>
+          <input id="prenom" type="text" placeholder="Jean" class="w-full border border-line rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-ink mb-1">Nom</label>
+          <input id="nom" type="text" placeholder="Dupont" class="w-full border border-line rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition" />
+        </div>
+        <div class="sm:col-span-2">
+          <label class="block text-sm font-medium text-ink mb-1">Raison sociale <span class="text-muted font-normal">(si différente du nom)</span></label>
+          <input id="raison-sociale" type="text" placeholder="Plomberie Dupont SARL" class="w-full border border-line rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-ink mb-1">SIRET</label>
+          <input id="siret" type="text" placeholder="123 456 789 00012" maxlength="17" class="w-full border border-line rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-ink mb-1">Téléphone</label>
+          <input id="telephone" type="tel" placeholder="06 12 34 56 78" class="w-full border border-line rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition" />
+        </div>
+        <div class="sm:col-span-2">
+          <label class="block text-sm font-medium text-ink mb-1">Email professionnel</label>
+          <input id="email" type="email" placeholder="jean.dupont@example.fr" class="w-full border border-line rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition" />
+        </div>
+        <div class="sm:col-span-2">
+          <label class="block text-sm font-medium text-ink mb-1">Conditions de paiement <span class="text-muted font-normal">(optionnel)</span></label>
+          <input id="conditions" type="text" placeholder="Ex : 30% à la commande, solde à réception" class="w-full border border-line rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition" />
+        </div>
+      </div>
+    </div>
+
+    <!-- CLIENT -->
+    <div class="card p-6 space-y-4">
+      <h2 class="font-semibold text-ink">Votre client</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-ink mb-1">Nom du client</label>
+          <input id="client-nom" type="text" placeholder="Mme Martin" class="w-full border border-line rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-ink mb-1">Ville <span class="text-muted font-normal">(optionnel)</span></label>
+          <input id="client-ville" type="text" placeholder="Paris 12e" class="w-full border border-line rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition" />
+        </div>
+      </div>
+    </div>
+
+    <!-- CHANTIER -->
+    <div class="card p-6 space-y-4">
+      <div>
+        <h2 class="font-semibold text-ink">Décrivez votre chantier</h2>
+        <p class="text-sm text-muted mt-0.5">Écrivez comme vous le diriez à un collègue. L'IA comprend le langage naturel.</p>
+      </div>
+      <div>
+        <p class="text-xs font-medium text-muted uppercase tracking-wide mb-2">Exemples — cliquez pour insérer</p>
+        <div class="flex flex-wrap gap-2">
+          <button onclick="insererExemple('sdb')" class="text-xs px-3 py-1.5 rounded-full border border-line bg-chalk hover:bg-orange-50 hover:border-orange-300 hover:text-orange-600 transition">Réfection salle de bain</button>
+          <button onclick="insererExemple('elec')" class="text-xs px-3 py-1.5 rounded-full border border-line bg-chalk hover:bg-orange-50 hover:border-orange-300 hover:text-orange-600 transition">Mise aux normes électrique</button>
+          <button onclick="insererExemple('peinture')" class="text-xs px-3 py-1.5 rounded-full border border-line bg-chalk hover:bg-orange-50 hover:border-orange-300 hover:text-orange-600 transition">Peinture appartement</button>
+          <button onclick="insererExemple('plomberie')" class="text-xs px-3 py-1.5 rounded-full border border-line bg-chalk hover:bg-orange-50 hover:border-orange-300 hover:text-orange-600 transition">Fuite plomberie</button>
+        </div>
+      </div>
+      <div>
+        <textarea id="description" rows="7"
+          placeholder="Ex : Refaire complètement la salle de bain, environ 6m². Dépose de l'ancien carrelage sol et murs, pose de carrelage neuf, remplacement de la douche par une douche à l'italienne, changement du lavabo et du mitigeur. Travaux sur 3 jours en juillet."
+          oninput="mettreAJourCompteur()"
+          class="w-full border border-line rounded-lg px-4 py-3 text-sm leading-relaxed focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition resize-none"></textarea>
+        <div class="flex items-center justify-between mt-2">
+          <p id="aide-compteur" class="text-xs text-muted">Minimum 20 caractères pour activer la génération</p>
+          <span id="compteur" class="text-xs text-muted">0 caractère</span>
+        </div>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-ink mb-2">Taux de TVA applicable</label>
+        <div class="flex gap-4">
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="radio" name="tva" value="10" checked class="accent-orange-500" />
+            <span class="text-sm">10% <span class="text-muted">(rénovation)</span></span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="radio" name="tva" value="20" class="accent-orange-500" />
+            <span class="text-sm">20% <span class="text-muted">(standard)</span></span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- BOUTON -->
+    <div class="flex flex-col items-center gap-3 pb-8">
+      <button id="btn-generer" disabled onclick="genererDevis()"
+        class="w-full sm:w-auto sm:min-w-64 px-8 py-4 rounded-xl font-semibold text-base transition-all duration-200 bg-line text-muted cursor-not-allowed">
+        <span id="btn-texte">Décrivez votre chantier d'abord</span>
+      </button>
+      <p class="text-xs text-muted text-center">Génération en quelques secondes — vos données ne sont pas stockées</p>
+    </div>
+    <div id="zone-erreur" class="hidden card p-4 border-red-200 bg-red-50">
+      <p class="text-sm text-red-700 font-medium" id="msg-erreur"></p>
+    </div>
+  </main>
+
+  <!-- RÉSULTAT -->
+  <section id="section-resultat" class="hidden max-w-3xl mx-auto px-4 py-8 space-y-6">
+    <div class="flex items-center justify-between flex-wrap gap-3">
+      <div>
+        <h1 class="text-2xl font-bold text-ink">Votre devis est prêt !</h1>
+        <p class="text-muted mt-1">Vérifiez les lignes et téléchargez le PDF.</p>
+      </div>
+      <button onclick="telechargerPDF()" class="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 transition">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        Télécharger PDF
+      </button>
+    </div>
+
+    <div id="devis-pdf" class="card p-8 space-y-6">
+      <div class="flex justify-between items-start border-b border-line pb-6">
+        <div>
+          <div id="logo-devis-wrapper" class="mb-3 hidden"><img id="logo-devis" src="" alt="Logo" class="h-14 max-w-32 object-contain rounded" /></div>
+          <div id="monogramme-devis" class="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center mb-3"><span class="text-white font-bold">D</span></div>
+          <p id="artisan-nom" class="font-bold text-lg text-ink"></p>
+          <p id="artisan-raison" class="text-sm text-muted"></p>
+          <p id="artisan-siret" class="text-sm text-muted"></p>
+          <p id="artisan-contact" class="text-sm text-muted"></p>
+        </div>
+        <div class="text-right">
+          <p class="text-2xl font-bold text-ink">DEVIS</p>
+          <p id="devis-numero" class="text-sm text-muted mt-1"></p>
+          <p id="devis-date" class="text-sm text-muted"></p>
+          <p id="devis-validite" class="text-sm text-muted"></p>
+        </div>
+      </div>
+      <div>
+        <p class="text-xs font-semibold text-muted uppercase tracking-wide mb-2">Devis établi pour</p>
+        <p id="client-nom-affiche" class="font-semibold text-ink"></p>
+        <p id="client-ville-affiche" class="text-sm text-muted"></p>
+      </div>
+      <p id="devis-titre" class="font-semibold text-ink"></p>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="bg-chalk">
+              <th class="text-left px-3 py-2 font-semibold text-ink rounded-tl-lg">Désignation</th>
+              <th class="text-center px-3 py-2 font-semibold text-ink">Qté</th>
+              <th class="text-center px-3 py-2 font-semibold text-ink">Unité</th>
+              <th class="text-right px-3 py-2 font-semibold text-ink">PU HT</th>
+              <th class="text-right px-3 py-2 font-semibold text-ink rounded-tr-lg">Total HT</th>
+            </tr>
+          </thead>
+          <tbody id="devis-lignes" class="divide-y divide-line"></tbody>
+        </table>
+      </div>
+      <div class="flex justify-end">
+        <div class="w-64 space-y-2">
+          <div class="flex justify-between text-sm"><span class="text-muted">Total HT</span><span id="total-ht" class="font-medium text-ink"></span></div>
+          <div class="flex justify-between text-sm"><span id="label-tva" class="text-muted">TVA (10%)</span><span id="total-tva" class="font-medium text-ink"></span></div>
+          <div class="flex justify-between text-base font-bold border-t border-line pt-2"><span class="text-ink">Total TTC</span><span id="total-ttc" class="text-orange-500"></span></div>
+        </div>
+      </div>
+      <div class="border-t border-line pt-4 space-y-2">
+        <p id="conditions-affichees" class="text-sm text-muted"></p>
+        <p class="text-xs text-muted">Devis valable 30 jours à compter de sa date d'émission. Ce document tient lieu de devis conformément aux articles L.111-1 et suivants du code de la consommation.</p>
+      </div>
+      <div class="flex justify-between pt-4 border-t border-line">
+        <div><p class="text-xs text-muted mb-8">Bon pour accord — Date et signature du client :</p><div class="w-48 h-0.5 bg-line"></div></div>
+        <div class="text-right"><p class="text-xs text-muted mb-8">Cachet et signature de l'entreprise :</p><div class="w-48 h-0.5 bg-line"></div></div>
+      </div>
+    </div>
+
+    <div id="msg-sauvegarde" class="hidden text-sm text-green-600 bg-green-50 border border-green-200 rounded-lg px-4 py-3">
+      ✓ Devis sauvegardé dans votre historique
+    </div>
+    <div class="flex justify-center pb-8">
+      <button onclick="recommencer()" class="px-6 py-3 border border-line rounded-xl text-sm font-medium text-ink hover:bg-chalk transition">← Créer un nouveau devis</button>
+    </div>
+  </section>
+
+  <script>
+    // AUTH
+    let utilisateurCourant = null;
+
+    async function initAuth() {
+      if (!sb) return;
+      const { data: { session } } = await sb.auth.getSession();
+      if (session) mettreAJourUI(session.user);
+      sb.auth.onAuthStateChange((_e, session) => {
+        mettreAJourUI(session?.user || null);
+        if (session?.user) chargerProfilSupabase(session.user.id);
+      });
+    }
+
+    function mettreAJourUI(user) {
+      utilisateurCourant = user;
+      const badgeSync = document.getElementById('badge-sync');
+      if (user) {
+        document.getElementById('label-compte').textContent = user.email.split('@')[0];
+        document.getElementById('user-email-display').textContent = user.email;
+        badgeSync.textContent = '✓ Synchronisé avec votre compte';
+        badgeSync.className = 'text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full';
+      } else {
+        document.getElementById('label-compte').textContent = 'Mon compte';
+        badgeSync.textContent = 'Mémorisées sur cet appareil';
+        badgeSync.className = 'text-xs text-muted bg-chalk px-2 py-1 rounded-full';
+      }
+    }
+
+    function gererCompte() {
+      if (utilisateurCourant) {
+        const dd = document.getElementById('dropdown-compte');
+        dd.classList.toggle('hidden');
+        setTimeout(() => document.addEventListener('click', () => dd.classList.add('hidden'), { once: true }), 10);
+      } else {
+        ouvrirModal();
+      }
+    }
+
+    function ouvrirModal() { document.getElementById('modal-auth').classList.remove('hidden'); }
+    function fermerModal() {
+      document.getElementById('modal-auth').classList.add('hidden');
+      document.getElementById('auth-erreur').classList.add('hidden');
+    }
+
+    function basculerOnglet(o) {
+      const c = o === 'connexion';
+      document.getElementById('tab-connexion').className = c ? 'flex-1 pb-3 text-sm font-semibold text-orange-500 border-b-2 border-orange-500' : 'flex-1 pb-3 text-sm font-medium text-muted';
+      document.getElementById('tab-inscription').className = !c ? 'flex-1 pb-3 text-sm font-semibold text-orange-500 border-b-2 border-orange-500' : 'flex-1 pb-3 text-sm font-medium text-muted';
+      document.getElementById('auth-titre').textContent = c ? 'Connexion' : 'Créer un compte';
+      document.getElementById('btn-auth').textContent = c ? 'Se connecter' : 'Créer mon compte';
+      document.getElementById('auth-alt').innerHTML = c
+        ? 'Pas encore de compte ? <button onclick="basculerOnglet(\'inscription\')" class="text-orange-500 hover:underline">Créer un compte</button>'
+        : 'Déjà un compte ? <button onclick="basculerOnglet(\'connexion\')" class="text-orange-500 hover:underline">Se connecter</button>';
+      document.getElementById('auth-erreur').classList.add('hidden');
+    }
+
+    async function soumettreAuth(e) {
+      e.preventDefault();
+      if (!sb) { alert('Supabase non configuré. Voir README.md'); return; }
+      const email = document.getElementById('auth-email').value;
+      const mdp = document.getElementById('auth-mdp').value;
+      const inscription = !document.getElementById('tab-inscription').className.includes('text-muted');
+      const errEl = document.getElementById('auth-erreur');
+      const btn = document.getElementById('btn-auth');
+      btn.disabled = true; btn.textContent = 'Chargement...';
+      errEl.classList.add('hidden');
+      try {
+        let res;
+        if (inscription) {
+          res = await sb.auth.signUp({ email, password: mdp });
+          if (res.error) throw res.error;
+          if (!res.data.session) {
+            errEl.textContent = '✓ Email de confirmation envoyé. Vérifiez votre boîte mail.';
+            errEl.className = 'text-sm text-green-600 bg-green-50 px-3 py-2 rounded-lg';
+            errEl.classList.remove('hidden'); return;
+          }
+        } else {
+          res = await sb.auth.signInWithPassword({ email, password: mdp });
+          if (res.error) throw res.error;
+        }
+        fermerModal();
+      } catch (err) {
+        errEl.textContent = tradErreur(err.message);
+        errEl.className = 'text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg';
+        errEl.classList.remove('hidden');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = inscription ? 'Créer mon compte' : 'Se connecter';
+      }
+    }
+
+    function tradErreur(m) {
+      if (m.includes('Invalid login')) return 'Email ou mot de passe incorrect.';
+      if (m.includes('already registered')) return 'Cet email est déjà utilisé.';
+      if (m.includes('Password should be')) return 'Mot de passe : 6 caractères minimum.';
+      return m;
+    }
+
+    async function seDeconnecter() {
+      if (sb) await sb.auth.signOut();
+      document.getElementById('dropdown-compte').classList.add('hidden');
+    }
+
+    // PROFIL SUPABASE
+    async function chargerProfilSupabase(userId) {
+      if (!sb) return;
+      const { data } = await sb.from('profils').select('*').eq('user_id', userId).single();
+      if (!data) return;
+      const map = { prenom:'prenom', nom:'nom', raison_sociale:'raison-sociale', siret:'siret', telephone:'telephone', email_pro:'email', conditions:'conditions' };
+      for (const [col, id] of Object.entries(map)) { if (data[col]) document.getElementById(id).value = data[col]; }
+      if (data.logo_base64) { afficherLogoPreview(data.logo_base64); localStorage.setItem('devisIA_logo', data.logo_base64); }
+    }
+
+    async function sauvegarderProfilSupabase() {
+      if (!sb || !utilisateurCourant) return;
+      await sb.from('profils').upsert({
+        user_id: utilisateurCourant.id,
+        prenom: document.getElementById('prenom').value,
+        nom: document.getElementById('nom').value,
+        raison_sociale: document.getElementById('raison-sociale').value,
+        siret: document.getElementById('siret').value,
+        telephone: document.getElementById('telephone').value,
+        email_pro: document.getElementById('email').value,
+        conditions: document.getElementById('conditions').value,
+        logo_base64: localStorage.getItem('devisIA_logo') || null,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'user_id' });
+    }
+
+    async function sauvegarderDevisSupabase(devis, client, tva, totalHt, totalTtc, numero) {
+      if (!sb || !utilisateurCourant) return;
+      await sb.from('devis').insert({
+        user_id: utilisateurCourant.id, numero, titre: devis.titre,
+        client_nom: client.nom, client_ville: client.ville,
+        description: document.getElementById('description').value,
+        tva: parseInt(tva), lignes: devis.lignes, total_ht: totalHt, total_ttc: totalTtc
+      });
+      document.getElementById('msg-sauvegarde').classList.remove('hidden');
+    }
+
+    // LOGO
+    function chargerLogo(e) {
+      const file = e.target.files[0]; if (!file) return;
+      if (file.size > 512000) { alert('Image trop lourde (max 500 Ko)'); return; }
+      const reader = new FileReader();
+      reader.onload = (ev) => { localStorage.setItem('devisIA_logo', ev.target.result); afficherLogoPreview(ev.target.result); };
+      reader.readAsDataURL(file);
+    }
+    function afficherLogoPreview(b64) {
+      document.getElementById('logo-preview').innerHTML = `<img src="${b64}" alt="Logo" class="w-full h-full object-contain p-1" />`;
+      document.getElementById('btn-suppr-logo').classList.remove('hidden');
+    }
+    function supprimerLogo() {
+      localStorage.removeItem('devisIA_logo');
+      document.getElementById('logo-preview').innerHTML = `<svg class="w-6 h-6 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>`;
+      document.getElementById('btn-suppr-logo').classList.add('hidden');
+      document.getElementById('logo-input').value = '';
+    }
+
+    // EXEMPLES
+    const exemples = {
+      sdb: "Réfection complète de la salle de bain, environ 7m². Dépose de l'ancien carrelage sol et murs, pose de carrelage neuf grès cérame, remplacement de la douche par une douche à l'italienne 90x90, changement du lavabo et du mitigeur, reprise de l'étanchéité. Travaux sur 4 jours.",
+      elec: "Mise aux normes du tableau électrique d'un appartement de 65m², remplacement du tableau général, ajout de disjoncteurs différentiels, vérification et reprise des prises de terre. Environ 2 jours de travail.",
+      peinture: "Peinture complète d'un appartement T3 de 70m². Préparation des supports (rebouchage, ponçage), deux couches de peinture blanche sur murs et plafonds, peinture des boiseries. Fourniture des peintures incluse.",
+      plomberie: "Remplacement d'une colonne montante d'eau froide vétuste dans un immeuble, 4 étages. Fourniture et pose du tuyau multicouche, raccordements, test d'étanchéité."
+    };
+    function insererExemple(k) { document.getElementById('description').value = exemples[k]; mettreAJourCompteur(); document.getElementById('description').focus(); }
+
+    // COMPTEUR
+    function mettreAJourCompteur() {
+      const nb = document.getElementById('description').value.length;
+      document.getElementById('compteur').textContent = nb + ' caractère' + (nb > 1 ? 's' : '');
+      const btn = document.getElementById('btn-generer');
+      const aide = document.getElementById('aide-compteur');
+      if (nb >= 20) {
+        btn.disabled = false;
+        btn.className = 'w-full sm:w-auto sm:min-w-64 px-8 py-4 rounded-xl font-semibold text-base transition-all duration-200 bg-orange-500 text-white hover:bg-orange-600 active:scale-95 cursor-pointer shadow-sm';
+        document.getElementById('btn-texte').textContent = 'Générer mon devis →';
+        aide.textContent = '✓ Prêt à générer'; aide.className = 'text-xs text-green-600';
+        document.getElementById('compteur').className = 'text-xs text-green-600';
+      } else {
+        btn.disabled = true;
+        btn.className = 'w-full sm:w-auto sm:min-w-64 px-8 py-4 rounded-xl font-semibold text-base transition-all duration-200 bg-line text-muted cursor-not-allowed';
+        document.getElementById('btn-texte').textContent = "Décrivez votre chantier d'abord";
+        aide.textContent = 'Minimum 20 caractères pour activer la génération'; aide.className = 'text-xs text-muted';
+        document.getElementById('compteur').className = 'text-xs text-muted';
+      }
+    }
+
+    // GENERER
+    async function genererDevis() {
+      const description = document.getElementById('description').value.trim();
+      const tva = document.querySelector('input[name="tva"]:checked').value;
+      const artisan = {
+        prenom: document.getElementById('prenom').value.trim(),
+        nom: document.getElementById('nom').value.trim(),
+        raisonSociale: document.getElementById('raison-sociale').value.trim(),
+        siret: document.getElementById('siret').value.trim(),
+        telephone: document.getElementById('telephone').value.trim(),
+        email: document.getElementById('email').value.trim(),
+        conditions: document.getElementById('conditions').value.trim(),
+      };
+      const client = { nom: document.getElementById('client-nom').value.trim(), ville: document.getElementById('client-ville').value.trim() };
+
+      setChargement(true); cacherErreur();
+      try {
+        const res = await fetch('/.netlify/functions/generer-devis', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ description, tva, artisan, client })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Erreur serveur');
+        const { totalHt, totalTtc, numero } = afficherDevis(data, artisan, client, tva);
+        await sauvegarderProfilSupabase();
+        await sauvegarderDevisSupabase(data, client, tva, totalHt, totalTtc, numero);
+      } catch (err) {
+        setChargement(false);
+        afficherErreur(err.message || 'Une erreur est survenue. Réessayez.');
+      }
+    }
+
+    function setChargement(actif) {
+      const btn = document.getElementById('btn-generer');
+      if (actif) {
+        btn.disabled = true;
+        btn.className = 'w-full sm:w-auto sm:min-w-64 px-8 py-4 rounded-xl font-semibold text-base bg-orange-500 text-white opacity-80 cursor-wait';
+        document.getElementById('btn-texte').innerHTML = `<span class="flex items-center justify-center gap-2"><svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>Génération en cours...</span>`;
+        avancerEtape(2);
+      } else { avancerEtape(1); }
+    }
+
+    // AFFICHAGE DEVIS
+    function afficherDevis(data, artisan, client, tva) {
+      const logo = localStorage.getItem('devisIA_logo');
+      if (logo) { document.getElementById('logo-devis').src = logo; document.getElementById('logo-devis-wrapper').classList.remove('hidden'); document.getElementById('monogramme-devis').classList.add('hidden'); }
+      else { document.getElementById('logo-devis-wrapper').classList.add('hidden'); document.getElementById('monogramme-devis').classList.remove('hidden'); }
+
+      const nomAffiche = artisan.raisonSociale || [artisan.prenom, artisan.nom].filter(Boolean).join(' ') || 'Votre entreprise';
+      document.getElementById('artisan-nom').textContent = nomAffiche;
+      document.getElementById('artisan-raison').textContent = artisan.raisonSociale && (artisan.prenom || artisan.nom) ? [artisan.prenom, artisan.nom].filter(Boolean).join(' ') : '';
+      document.getElementById('artisan-siret').textContent = artisan.siret ? 'SIRET : ' + artisan.siret : '';
+      document.getElementById('artisan-contact').textContent = [artisan.telephone, artisan.email].filter(Boolean).join(' | ');
+
+      const now = new Date();
+      const fmt = (d) => d.toLocaleDateString('fr-FR', { day:'2-digit', month:'2-digit', year:'numeric' });
+      const validite = new Date(now); validite.setDate(validite.getDate() + 30);
+      const numero = 'DEV-' + now.toISOString().slice(0,10).replace(/-/g,'') + '-' + Math.floor(Math.random()*900+100);
+
+      document.getElementById('devis-numero').textContent = 'N° ' + numero;
+      document.getElementById('devis-date').textContent = 'Date : ' + fmt(now);
+      document.getElementById('devis-validite').textContent = 'Valable jusqu\'au : ' + fmt(validite);
+      document.getElementById('client-nom-affiche').textContent = client.nom || 'Client';
+      document.getElementById('client-ville-affiche').textContent = client.ville || '';
+      document.getElementById('devis-titre').textContent = data.titre || 'Travaux';
+
+      const tbody = document.getElementById('devis-lignes'); tbody.innerHTML = '';
+      let totalHt = 0;
+      (data.lignes || []).forEach(l => {
+        const montant = l.quantite * l.prix_unitaire_ht; totalHt += montant;
+        const tr = document.createElement('tr'); tr.className = 'hover:bg-orange-50 transition-colors';
+        tr.innerHTML = `<td class="px-3 py-3 text-ink">${l.designation}</td><td class="px-3 py-3 text-center text-muted">${l.quantite}</td><td class="px-3 py-3 text-center text-muted">${l.unite}</td><td class="px-3 py-3 text-right text-muted">${fp(l.prix_unitaire_ht)}</td><td class="px-3 py-3 text-right font-medium text-ink">${fp(montant)}</td>`;
+        tbody.appendChild(tr);
+      });
+
+      const tauxTva = parseFloat(tva) / 100;
+      const montantTva = totalHt * tauxTva;
+      const totalTtc = totalHt + montantTva;
+      document.getElementById('total-ht').textContent = fp(totalHt);
+      document.getElementById('label-tva').textContent = `TVA (${tva}%)`;
+      document.getElementById('total-tva').textContent = fp(montantTva);
+      document.getElementById('total-ttc').textContent = fp(totalTtc);
+      document.getElementById('conditions-affichees').textContent = artisan.conditions ? 'Conditions de paiement : ' + artisan.conditions : 'Conditions de paiement : Chèque ou virement bancaire.';
+
+      document.getElementById('section-formulaire').classList.add('hidden');
+      document.getElementById('section-resultat').classList.remove('hidden');
+      document.getElementById('btn-recommencer').classList.remove('hidden');
+      document.getElementById('msg-sauvegarde').classList.add('hidden');
+      avancerEtape(3);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return { totalHt, totalTtc, numero };
+    }
+
+    const fp = (n) => new Intl.NumberFormat('fr-FR', { style:'currency', currency:'EUR' }).format(n);
+
+    function telechargerPDF() {
+      const nom = document.getElementById('client-nom-affiche').textContent.replace(/\s+/g,'_') || 'Client';
+      const date = new Date().toISOString().slice(0,10);
+      html2pdf().set({ margin:[10,10,10,10], filename:`Devis_${nom}_${date}.pdf`, image:{type:'jpeg',quality:0.98}, html2canvas:{scale:2,useCORS:true}, jsPDF:{unit:'mm',format:'a4',orientation:'portrait'} }).from(document.getElementById('devis-pdf')).save();
+    }
+
+    function afficherErreur(m) { document.getElementById('msg-erreur').textContent = '⚠️ ' + m; document.getElementById('zone-erreur').classList.remove('hidden'); }
+    function cacherErreur() { document.getElementById('zone-erreur').classList.add('hidden'); }
+
+    function avancerEtape(e) {
+      for (let i = 1; i <= 3; i++) {
+        const dot = document.getElementById('step'+i+'-dot'), lbl = document.getElementById('step'+i+'-label');
+        if (i <= e) { dot.className = 'w-6 h-6 rounded-full bg-orange-500 flex items-center justify-center flex-shrink-0'; dot.querySelector('span').className = 'text-white text-xs font-semibold'; lbl.className = 'text-sm font-medium text-ink'; }
+        else { dot.className = 'w-6 h-6 rounded-full bg-line flex items-center justify-center flex-shrink-0'; dot.querySelector('span').className = 'text-muted text-xs font-semibold'; lbl.className = 'text-sm text-muted'; }
+      }
+    }
+
+    function recommencer() {
+      document.getElementById('section-formulaire').classList.remove('hidden');
+      document.getElementById('section-resultat').classList.add('hidden');
+      document.getElementById('btn-recommencer').classList.add('hidden');
+      document.getElementById('description').value = '';
+      mettreAJourCompteur(); avancerEtape(1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // LOCALSTORAGE
+    ['prenom','nom','raison-sociale','siret','telephone','email','conditions'].forEach(id => {
+      const el = document.getElementById(id);
+      const v = localStorage.getItem('devisIA_'+id); if (v) el.value = v;
+      el.addEventListener('input', () => localStorage.setItem('devisIA_'+id, el.value));
+    });
+    const logoSauve = localStorage.getItem('devisIA_logo');
+    if (logoSauve) afficherLogoPreview(logoSauve);
+
+    initAuth();
+  </script>
+</body>
+</html>

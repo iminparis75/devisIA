@@ -1,0 +1,8 @@
+{
+  "name": "devisia-app",
+  "version": "1.0.0",
+  "description": "DevisIA — Générateur de devis IA pour artisans du bâtiment",
+  "engines": {
+    "node": ">=18"
+  }
+}

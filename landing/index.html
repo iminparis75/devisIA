@@ -1,0 +1,920 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DevisIA — Votre devis en 3 minutes</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: {
+          sans: ['Inter','system-ui','sans-serif'],
+          mono: ['"JetBrains Mono"','monospace'],
+        },
+        colors: {
+          ink:    { DEFAULT: '#161512', 60: '#5a564e', 40: '#8a857b' },
+          paper:  { DEFAULT: '#fbfaf7', 100: '#f4f1ea', 200: '#e8e2d5' },
+          chantier: { DEFAULT: '#e75a1f', dark: '#c54611', soft: '#fdeee5' },
+          forest: '#1f4a3a',
+        },
+        boxShadow: {
+          'soft': '0 1px 2px rgba(20,18,12,.04), 0 8px 24px -8px rgba(20,18,12,.08)',
+          'lift': '0 2px 4px rgba(20,18,12,.04), 0 24px 48px -16px rgba(20,18,12,.14)',
+        },
+      }
+    }
+  }
+</script>
+<style>
+  html { scroll-behavior: smooth; }
+  body { font-family: 'Inter', system-ui, sans-serif; background:#fbfaf7; color:#161512; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+  .num { font-variant-numeric: tabular-nums; }
+  .hatch {
+    background-image: repeating-linear-gradient(135deg, rgba(231,90,31,.10) 0 1px, transparent 1px 8px);
+  }
+  .grid-bg {
+    background-image:
+      linear-gradient(rgba(20,18,12,.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(20,18,12,.04) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+  .dotted {
+    background-image: radial-gradient(rgba(20,18,12,.18) 1px, transparent 1.2px);
+    background-size: 14px 14px;
+  }
+  .marker-underline {
+    background: linear-gradient(180deg, transparent 62%, rgba(231,90,31,.28) 62% 92%, transparent 92%);
+    padding: 0 .15em;
+  }
+  details > summary { list-style: none; cursor: pointer; }
+  details > summary::-webkit-details-marker { display: none; }
+  .fade-in { animation: fade .5s ease-out both; }
+  @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .pulse-dot { animation: pulseDot 1.4s ease-in-out infinite; }
+  @keyframes pulseDot { 0%,100% { opacity: .3; transform: scale(.9);} 50% { opacity:1; transform: scale(1.05);} }
+  .step-bar { background: linear-gradient(90deg, #e75a1f var(--p,0%), #e8e2d5 var(--p,0%)); transition: background .4s ease; }
+  .nav-blur { backdrop-filter: saturate(180%) blur(10px); -webkit-backdrop-filter: saturate(180%) blur(10px); }
+</style>
+</head>
+<body class="bg-paper text-ink">
+
+<!-- ============================================================== NAV -->
+<header class="sticky top-0 z-40 bg-paper/80 nav-blur border-b border-ink/5">
+  <div class="max-w-7xl mx-auto px-5 lg:px-8 h-16 flex items-center justify-between">
+    <a href="#top" class="flex items-center gap-2.5">
+      <span class="inline-flex items-center justify-center w-8 h-8 rounded-md bg-ink text-paper font-bold">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 3h7l3 3v7H3z" stroke="#e75a1f" stroke-width="1.6"/><path d="M5.5 8h5M5.5 10.5h3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+      </span>
+      <span class="font-bold text-[17px] tracking-tight">DevisIA</span>
+    </a>
+    <nav class="hidden md:flex items-center gap-8 text-sm text-ink/70">
+      <a href="#probleme" class="hover:text-ink">Le problème</a>
+      <a href="#etapes" class="hover:text-ink">Comment ça marche</a>
+      <a href="#apercu" class="hover:text-ink">Aperçu</a>
+      <a href="#avantages" class="hover:text-ink">Avantages</a>
+    </nav>
+    <div class="flex items-center gap-2">
+      <a href="#" class="hidden sm:inline text-sm text-ink/70 hover:text-ink px-3 py-2">Se connecter</a>
+      <a href="#cta" class="text-sm font-semibold bg-ink text-paper px-4 py-2.5 rounded-lg hover:bg-ink/90 transition">Essayer gratuitement</a>
+    </div>
+  </div>
+</header>
+
+<!-- ============================================================== HERO -->
+<section id="top" class="relative overflow-hidden">
+  <div class="absolute inset-0 grid-bg opacity-60 pointer-events-none"></div>
+  <div class="relative max-w-7xl mx-auto px-5 lg:px-8 pt-14 pb-20 lg:pt-20 lg:pb-28 grid lg:grid-cols-12 gap-10 lg:gap-16 items-center">
+    <div class="lg:col-span-6">
+      <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-chantier-soft text-chantier-dark text-xs font-semibold tracking-wide">
+        <span class="w-1.5 h-1.5 rounded-full bg-chantier"></span>
+        FAIT POUR LES ARTISANS DU BÂTIMENT
+      </div>
+      <h1 class="mt-5 text-[42px] leading-[1.05] sm:text-5xl lg:text-[64px] lg:leading-[1.02] font-extrabold tracking-tight">
+        Votre devis en
+        <span class="marker-underline">3 minutes</span>,<br/>
+        envoyé en un clic.
+      </h1>
+      <p class="mt-6 text-lg lg:text-xl text-ink/70 max-w-xl">
+        L'outil IA qui rédige vos devis à votre place. Vous décrivez le chantier, on génère le document pro.
+      </p>
+      <div class="mt-8 flex flex-col sm:flex-row gap-3">
+        <a href="#cta" class="inline-flex items-center justify-center gap-2 px-6 py-4 rounded-xl bg-chantier text-white font-semibold shadow-soft hover:bg-chantier-dark transition">
+          Essayer gratuitement
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <a href="#apercu" class="inline-flex items-center justify-center gap-2 px-6 py-4 rounded-xl bg-paper border border-ink/15 text-ink font-semibold hover:border-ink/40 transition">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><path d="M10 9l5 3-5 3V9z" fill="currentColor"/></svg>
+          Voir une démo
+        </a>
+      </div>
+      <div class="mt-8 flex flex-wrap items-center gap-6 text-sm text-ink/60">
+        <div class="flex items-center gap-2"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 12l4 4 10-10" stroke="#1f4a3a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Sans carte bancaire</div>
+        <div class="flex items-center gap-2"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 12l4 4 10-10" stroke="#1f4a3a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Disponible sur mobile</div>
+        <div class="flex items-center gap-2"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 12l4 4 10-10" stroke="#1f4a3a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Conforme TVA & mentions légales</div>
+      </div>
+    </div>
+
+    <!-- Hero visual: stylized quote mockup -->
+    <div class="lg:col-span-6 relative">
+      <div class="absolute -inset-6 hatch rounded-3xl -z-10"></div>
+      <div class="relative bg-white rounded-2xl shadow-lift border border-ink/5 overflow-hidden">
+        <!-- header strip -->
+        <div class="px-6 pt-6 pb-5 flex items-start justify-between border-b border-ink/5">
+          <div>
+            <div class="text-[11px] tracking-[0.18em] text-ink/40 font-semibold">DEVIS N° 2026-0142</div>
+            <div class="mt-1 text-xl font-bold tracking-tight">Salle de bain — M. Martin</div>
+            <div class="mt-0.5 text-sm text-ink/50">Établi le 24 mai 2026 · Valable 30 jours</div>
+          </div>
+          <div class="text-right">
+            <div class="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-ink text-paper">
+              <svg width="18" height="18" viewBox="0 0 16 16" fill="none"><path d="M3 3h7l3 3v7H3z" stroke="#e75a1f" stroke-width="1.6"/></svg>
+            </div>
+            <div class="mt-2 text-[11px] tracking-wider text-ink/40 font-semibold">PLOMBERIE<br/>DUPONT SARL</div>
+          </div>
+        </div>
+        <!-- table -->
+        <div class="px-6 py-5">
+          <div class="grid grid-cols-12 text-[11px] tracking-wider text-ink/40 font-semibold pb-3 border-b border-ink/10">
+            <div class="col-span-7">DÉSIGNATION</div>
+            <div class="col-span-2 text-right">QTÉ</div>
+            <div class="col-span-3 text-right">TOTAL HT</div>
+          </div>
+          <div class="divide-y divide-ink/5 text-sm">
+            <div class="grid grid-cols-12 py-3.5">
+              <div class="col-span-7">Dépose et évacuation baignoire</div>
+              <div class="col-span-2 text-right num text-ink/60">1 forfait</div>
+              <div class="col-span-3 text-right num font-semibold">300,00 €</div>
+            </div>
+            <div class="grid grid-cols-12 py-3.5">
+              <div class="col-span-7">Fourniture et pose douche 90×90</div>
+              <div class="col-span-2 text-right num text-ink/60">1 ens.</div>
+              <div class="col-span-3 text-right num font-semibold">850,00 €</div>
+            </div>
+            <div class="grid grid-cols-12 py-3.5">
+              <div class="col-span-7">Déplacement & approvisionnement</div>
+              <div class="col-span-2 text-right num text-ink/60">1 forfait</div>
+              <div class="col-span-3 text-right num font-semibold">150,00 €</div>
+            </div>
+          </div>
+        </div>
+        <!-- totals -->
+        <div class="px-6 pb-6">
+          <div class="bg-paper-100 rounded-xl p-4 space-y-1.5 text-sm">
+            <div class="flex justify-between text-ink/60"><span>Total HT</span><span class="num">1 300,00 €</span></div>
+            <div class="flex justify-between text-ink/60"><span>TVA 20%</span><span class="num">260,00 €</span></div>
+            <div class="flex justify-between pt-2 mt-2 border-t border-ink/10">
+              <span class="font-bold">Total TTC</span>
+              <span class="num font-bold text-chantier text-lg">1 560,00 €</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- floating badge -->
+      <div class="absolute -bottom-5 -left-5 sm:-left-8 bg-ink text-paper rounded-xl px-4 py-3 shadow-lift flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-chantier flex items-center justify-center">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 6v6l4 2" stroke="white" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="9" stroke="white" stroke-width="2"/></svg>
+        </div>
+        <div>
+          <div class="text-[11px] text-paper/60 tracking-wider">GÉNÉRÉ EN</div>
+          <div class="num font-bold">2 min 47 s</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================== PROBLÈME -->
+<section id="probleme" class="bg-ink text-paper relative overflow-hidden">
+  <div class="absolute inset-0 dotted opacity-[0.07] pointer-events-none"></div>
+  <div class="relative max-w-7xl mx-auto px-5 lg:px-8 py-20 lg:py-28">
+    <div class="max-w-3xl">
+      <div class="inline-flex items-center gap-2 text-xs font-semibold tracking-[0.18em] text-chantier">
+        <span class="w-6 h-px bg-chantier"></span> LE CONSTAT
+      </div>
+      <h2 class="mt-4 text-4xl lg:text-5xl font-extrabold tracking-tight">
+        Combien d'heures perdez-vous<br class="hidden sm:block"/>
+        sur vos devis&nbsp;?
+      </h2>
+      <p class="mt-5 text-lg text-paper/60 max-w-2xl">
+        Vous savez faire le chantier. Le reste — la paperasse, les chiffres, les mentions obligatoires — c'est ça qui plombe vos soirées.
+      </p>
+    </div>
+
+    <div class="mt-12 grid md:grid-cols-3 gap-5">
+      <!-- Carte 1 -->
+      <div class="relative bg-paper/[.04] border border-paper/10 rounded-2xl p-7 hover:bg-paper/[.06] transition">
+        <div class="flex items-baseline gap-2">
+          <span class="text-6xl font-extrabold num tracking-tight">30–60</span>
+          <span class="text-paper/50 font-medium">min</span>
+        </div>
+        <div class="mt-3 text-base font-semibold">passées sur un seul devis</div>
+        <p class="mt-2 text-sm text-paper/55 leading-relaxed">
+          Entre la saisie, le calcul TVA et la mise en forme, un devis correct prend souvent plus de temps que sa rédaction sur place.
+        </p>
+        <div class="mt-6 h-1 rounded-full bg-paper/10 overflow-hidden">
+          <div class="h-full w-[78%] bg-chantier"></div>
+        </div>
+      </div>
+      <!-- Carte 2 -->
+      <div class="relative bg-paper/[.04] border border-paper/10 rounded-2xl p-7 hover:bg-paper/[.06] transition">
+        <div class="flex items-baseline gap-2">
+          <span class="text-6xl font-extrabold num tracking-tight">15<span class="text-chantier">%</span></span>
+        </div>
+        <div class="mt-3 text-base font-semibold">de devis jamais signés</div>
+        <p class="mt-2 text-sm text-paper/55 leading-relaxed">
+          Un client qui attend trois jours son devis, c'est un client qui appelle déjà votre concurrent. Le temps, c'est du chiffre d'affaires.
+        </p>
+        <div class="mt-6 grid grid-cols-10 gap-1">
+          <span class="h-5 rounded-sm bg-chantier"></span>
+          <span class="h-5 rounded-sm bg-chantier"></span>
+          <span class="h-5 rounded-sm bg-paper/10"></span>
+          <span class="h-5 rounded-sm bg-paper/10"></span>
+          <span class="h-5 rounded-sm bg-paper/10"></span>
+          <span class="h-5 rounded-sm bg-paper/10"></span>
+          <span class="h-5 rounded-sm bg-paper/10"></span>
+          <span class="h-5 rounded-sm bg-paper/10"></span>
+          <span class="h-5 rounded-sm bg-paper/10"></span>
+          <span class="h-5 rounded-sm bg-paper/10"></span>
+        </div>
+      </div>
+      <!-- Carte 3 -->
+      <div class="relative bg-paper/[.04] border border-paper/10 rounded-2xl p-7 hover:bg-paper/[.06] transition">
+        <div class="flex items-baseline gap-2">
+          <span class="text-6xl font-extrabold num tracking-tight">1<span class="text-paper/40 text-3xl mx-2">/</span>3</span>
+        </div>
+        <div class="mt-3 text-base font-semibold">d'artisans perdent des chantiers</div>
+        <p class="mt-2 text-sm text-paper/55 leading-relaxed">
+          Faute de devis envoyé assez vite. Le métier se gagne le lundi matin, pas le dimanche soir devant un PDF qui refuse de s'aligner.
+        </p>
+        <div class="mt-6 flex items-center gap-2">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" fill="#e75a1f"/></svg>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="rgba(251,250,247,.25)" stroke-width="1.5"/></svg>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="rgba(251,250,247,.25)" stroke-width="1.5"/></svg>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================== ÉTAPES -->
+<section id="etapes" class="relative">
+  <div class="max-w-7xl mx-auto px-5 lg:px-8 py-20 lg:py-28">
+    <div class="max-w-3xl">
+      <div class="inline-flex items-center gap-2 text-xs font-semibold tracking-[0.18em] text-chantier">
+        <span class="w-6 h-px bg-chantier"></span> COMMENT ÇA MARCHE
+      </div>
+      <h2 class="mt-4 text-4xl lg:text-5xl font-extrabold tracking-tight">Trois étapes. Pas une de plus.</h2>
+      <p class="mt-5 text-lg text-ink/60 max-w-2xl">Du chantier décrit au devis dans la boîte mail du client. On a fait simple, exprès.</p>
+    </div>
+
+    <div class="mt-14 relative">
+      <!-- horizontal timeline line -->
+      <div class="hidden md:block absolute top-9 left-[8%] right-[8%] h-px bg-ink/15"></div>
+      <div class="hidden md:block absolute top-9 left-[8%] w-[84%] h-px bg-chantier" style="clip-path: inset(0 0 0 0);"></div>
+
+      <div class="grid md:grid-cols-3 gap-10 md:gap-8 relative">
+        <!-- Étape 1 -->
+        <div class="relative">
+          <div class="flex items-center gap-4">
+            <div class="relative z-10 w-[72px] h-[72px] rounded-2xl bg-paper border-2 border-chantier flex items-center justify-center shadow-soft">
+              <span class="text-2xl font-extrabold text-chantier num">01</span>
+            </div>
+            <div class="md:hidden flex-1 h-px bg-ink/10"></div>
+          </div>
+          <h3 class="mt-5 text-xl font-bold tracking-tight">Vous décrivez le chantier</h3>
+          <p class="mt-2 text-ink/60 leading-relaxed">À l'écrit, ou directement à la voix. Comme si vous expliquiez le boulot à un apprenti.</p>
+          <!-- voice mock -->
+          <div class="mt-5 rounded-xl border border-ink/10 bg-white p-4 shadow-soft">
+            <div class="flex items-center gap-3">
+              <div class="relative w-10 h-10 rounded-full bg-chantier flex items-center justify-center text-white">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="9" y="3" width="6" height="12" rx="3" fill="currentColor"/><path d="M5 11a7 7 0 0014 0M12 18v3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                <span class="absolute -inset-1 rounded-full border-2 border-chantier/30 pulse-dot"></span>
+              </div>
+              <div class="flex items-end gap-[3px] h-6 flex-1">
+                <span class="w-[3px] bg-chantier rounded-full" style="height:30%"></span>
+                <span class="w-[3px] bg-chantier rounded-full" style="height:60%"></span>
+                <span class="w-[3px] bg-chantier rounded-full" style="height:85%"></span>
+                <span class="w-[3px] bg-chantier rounded-full" style="height:45%"></span>
+                <span class="w-[3px] bg-chantier rounded-full" style="height:70%"></span>
+                <span class="w-[3px] bg-chantier rounded-full" style="height:90%"></span>
+                <span class="w-[3px] bg-chantier rounded-full" style="height:55%"></span>
+                <span class="w-[3px] bg-chantier rounded-full" style="height:75%"></span>
+                <span class="w-[3px] bg-chantier rounded-full" style="height:40%"></span>
+                <span class="w-[3px] bg-chantier rounded-full" style="height:65%"></span>
+                <span class="w-[3px] bg-ink/15 rounded-full" style="height:30%"></span>
+                <span class="w-[3px] bg-ink/15 rounded-full" style="height:50%"></span>
+              </div>
+              <div class="text-xs num text-ink/50">0:42</div>
+            </div>
+            <p class="mt-3 text-sm text-ink/60 italic">« Salle de bain chez M. Martin, dépose de la baignoire, pose d'une douche 90 par 90… »</p>
+          </div>
+        </div>
+
+        <!-- Étape 2 -->
+        <div class="relative">
+          <div class="flex items-center gap-4">
+            <div class="relative z-10 w-[72px] h-[72px] rounded-2xl bg-paper border-2 border-chantier flex items-center justify-center shadow-soft">
+              <span class="text-2xl font-extrabold text-chantier num">02</span>
+            </div>
+            <div class="md:hidden flex-1 h-px bg-ink/10"></div>
+          </div>
+          <h3 class="mt-5 text-xl font-bold tracking-tight">L'IA génère le devis</h3>
+          <p class="mt-2 text-ink/60 leading-relaxed">Structuré, chiffré, à votre nom. TVA, mentions légales, RIB : tout y est, prêt à signer.</p>
+          <div class="mt-5 rounded-xl border border-ink/10 bg-white p-4 shadow-soft">
+            <div class="flex items-center justify-between text-xs text-ink/50">
+              <span class="font-semibold tracking-wider">RÉDACTION EN COURS</span>
+              <span class="num">3,2 s</span>
+            </div>
+            <div class="mt-3 space-y-2">
+              <div class="flex items-center gap-2 text-sm"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M5 12l4 4 10-10" stroke="#1f4a3a" stroke-width="2.5" stroke-linecap="round"/></svg>En-tête entreprise généré</div>
+              <div class="flex items-center gap-2 text-sm"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M5 12l4 4 10-10" stroke="#1f4a3a" stroke-width="2.5" stroke-linecap="round"/></svg>3 lignes de prestation chiffrées</div>
+              <div class="flex items-center gap-2 text-sm"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M5 12l4 4 10-10" stroke="#1f4a3a" stroke-width="2.5" stroke-linecap="round"/></svg>TVA et totaux calculés</div>
+              <div class="flex items-center gap-2 text-sm text-ink/50">
+                <span class="w-3.5 h-3.5 rounded-full border-2 border-chantier border-t-transparent animate-spin"></span>
+                Mise en page PDF…
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Étape 3 -->
+        <div class="relative">
+          <div class="flex items-center gap-4">
+            <div class="relative z-10 w-[72px] h-[72px] rounded-2xl bg-chantier border-2 border-chantier flex items-center justify-center shadow-soft">
+              <span class="text-2xl font-extrabold text-white num">03</span>
+            </div>
+            <div class="md:hidden flex-1 h-px bg-ink/10"></div>
+          </div>
+          <h3 class="mt-5 text-xl font-bold tracking-tight">Vous envoyez au client</h3>
+          <p class="mt-2 text-ink/60 leading-relaxed">PDF professionnel, expédié par email ou SMS. Suivi de l'ouverture côté client.</p>
+          <div class="mt-5 rounded-xl border border-ink/10 bg-white p-4 shadow-soft">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-lg bg-ink/5 flex items-center justify-center">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M7 3h7l5 5v13H7z" stroke="#161512" stroke-width="1.5"/><path d="M14 3v5h5" stroke="#161512" stroke-width="1.5"/><path d="M9.5 13h5M9.5 16h3" stroke="#e75a1f" stroke-width="1.5" stroke-linecap="round"/></svg>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="text-sm font-semibold truncate">devis-martin-2026-0142.pdf</div>
+                <div class="text-xs text-ink/50 num">214 Ko · Prêt à envoyer</div>
+              </div>
+            </div>
+            <div class="mt-3 grid grid-cols-2 gap-2">
+              <button class="flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-ink text-paper text-sm font-semibold">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M3 6l9 7 9-7" stroke="currentColor" stroke-width="1.8"/><rect x="3" y="6" width="18" height="13" stroke="currentColor" stroke-width="1.8"/></svg>
+                Email
+              </button>
+              <button class="flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-paper-100 text-ink text-sm font-semibold border border-ink/10">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M21 11.5a8.4 8.4 0 01-8.4 8.4 8.4 8.4 0 01-4-1l-4.6 1.2 1.2-4.4a8.4 8.4 0 1115.8-4.2z" stroke="currentColor" stroke-width="1.6"/></svg>
+                SMS
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================== APERÇU INTERACTIF -->
+<section id="apercu" class="bg-paper-100 border-y border-ink/5">
+  <div class="max-w-7xl mx-auto px-5 lg:px-8 py-20 lg:py-28">
+    <div class="max-w-3xl">
+      <div class="inline-flex items-center gap-2 text-xs font-semibold tracking-[0.18em] text-chantier">
+        <span class="w-6 h-px bg-chantier"></span> APERÇU DE L'OUTIL
+      </div>
+      <h2 class="mt-4 text-4xl lg:text-5xl font-extrabold tracking-tight">À quoi ça ressemble ?</h2>
+      <p class="mt-5 text-lg text-ink/60 max-w-2xl">Remplissez le formulaire ci-dessous. Le devis se met à jour en temps réel, comme dans l'appli.</p>
+    </div>
+
+    <div class="mt-12 grid lg:grid-cols-5 gap-6 lg:gap-8">
+      <!-- FORM (left) -->
+      <div class="lg:col-span-2">
+        <div class="bg-white rounded-2xl shadow-soft border border-ink/5 overflow-hidden">
+          <div class="px-6 pt-5 pb-4 border-b border-ink/5 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <div class="flex gap-1.5">
+                <span class="w-2.5 h-2.5 rounded-full bg-paper-200"></span>
+                <span class="w-2.5 h-2.5 rounded-full bg-paper-200"></span>
+                <span class="w-2.5 h-2.5 rounded-full bg-paper-200"></span>
+              </div>
+              <span class="ml-3 text-xs tracking-wider text-ink/40 font-semibold">NOUVEAU DEVIS</span>
+            </div>
+            <div class="text-xs text-ink/40 num">étape 1/1</div>
+          </div>
+
+          <form id="devis-form" class="p-6 space-y-5" onsubmit="return false;">
+            <!-- Prestation -->
+            <div>
+              <label class="block text-sm font-semibold mb-2">Type de prestation</label>
+              <div class="grid grid-cols-3 gap-2" id="presta-group">
+                <button type="button" data-presta="Plomberie" data-icon="plomb" class="presta-btn px-3 py-2.5 rounded-lg border text-sm font-medium transition flex items-center justify-center gap-1.5">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M5 5h6v6M5 5l8 8M11 19h8v-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+                  Plomberie
+                </button>
+                <button type="button" data-presta="Électricité" data-icon="elec" class="presta-btn px-3 py-2.5 rounded-lg border text-sm font-medium transition flex items-center justify-center gap-1.5">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+                  Électricité
+                </button>
+                <button type="button" data-presta="Peinture" data-icon="peint" class="presta-btn px-3 py-2.5 rounded-lg border text-sm font-medium transition flex items-center justify-center gap-1.5">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M4 7h14v5H4zM8 12v3a3 3 0 003 3v3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M18 7V5H6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+                  Peinture
+                </button>
+                <button type="button" data-presta="Maçonnerie" data-icon="maco" class="presta-btn px-3 py-2.5 rounded-lg border text-sm font-medium transition flex items-center justify-center gap-1.5">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M3 8h6v4H3zM9 8h6v4H9zM15 8h6v4h-6zM3 12h4v4H3zM7 12h6v4H7zM13 12h6v4h-6z" stroke="currentColor" stroke-width="1.4"/></svg>
+                  Maçonnerie
+                </button>
+                <button type="button" data-presta="Menuiserie" data-icon="menu" class="presta-btn px-3 py-2.5 rounded-lg border text-sm font-medium transition flex items-center justify-center gap-1.5">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M4 4h16v16H4z M4 9h16 M9 4v16" stroke="currentColor" stroke-width="1.6"/></svg>
+                  Menuiserie
+                </button>
+                <button type="button" data-presta="Autre" data-icon="autre" class="presta-btn px-3 py-2.5 rounded-lg border text-sm font-medium transition flex items-center justify-center gap-1.5">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="6" cy="12" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><circle cx="18" cy="12" r="1.5" fill="currentColor"/></svg>
+                  Autre
+                </button>
+              </div>
+            </div>
+
+            <!-- Description -->
+            <div>
+              <label class="block text-sm font-semibold mb-2">Description du chantier</label>
+              <textarea id="f-desc" rows="3" placeholder="Ex. Remplacement baignoire par douche 90×90, dépose, évacuation, raccordement."
+                class="w-full rounded-lg border border-ink/15 px-3.5 py-3 text-sm leading-relaxed focus:border-chantier focus:ring-2 focus:ring-chantier/20 outline-none resize-none"></textarea>
+            </div>
+
+            <!-- Surface / durée + Nom client -->
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-sm font-semibold mb-2">Surface / durée</label>
+                <div class="flex rounded-lg border border-ink/15 overflow-hidden focus-within:border-chantier focus-within:ring-2 focus-within:ring-chantier/20">
+                  <input id="f-qty" type="number" min="0" value="8" class="flex-1 px-3.5 py-3 text-sm num outline-none w-0"/>
+                  <select id="f-unit" class="px-3 py-3 text-sm bg-paper-100 border-l border-ink/10 outline-none">
+                    <option>m²</option>
+                    <option>ml</option>
+                    <option>h</option>
+                    <option>jours</option>
+                    <option>forfait</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label class="block text-sm font-semibold mb-2">Nom du client</label>
+                <input id="f-client" type="text" placeholder="M. Martin"
+                  class="w-full rounded-lg border border-ink/15 px-3.5 py-3 text-sm outline-none focus:border-chantier focus:ring-2 focus:ring-chantier/20"/>
+              </div>
+            </div>
+
+            <!-- generate button -->
+            <button id="generate-btn" type="button" class="w-full mt-2 inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-lg bg-chantier text-white font-semibold hover:bg-chantier-dark transition disabled:opacity-50">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 2l2.5 7H22l-6 4.5L18 21l-6-4-6 4 2-7.5L2 9h7.5L12 2z" fill="currentColor"/></svg>
+              <span id="gen-label">Générer le devis</span>
+            </button>
+
+            <p class="text-xs text-ink/40 text-center">Aperçu — l'IA est désactivée dans cette démo.</p>
+          </form>
+        </div>
+
+        <!-- progress + status -->
+        <div class="mt-4 px-1 flex items-center gap-3 text-sm text-ink/50">
+          <div class="flex-1 h-1.5 rounded-full bg-paper-200 overflow-hidden">
+            <div id="form-progress" class="step-bar h-full"></div>
+          </div>
+          <span id="completion" class="num font-semibold text-ink/70">0%</span>
+        </div>
+      </div>
+
+      <!-- PREVIEW (right) -->
+      <div class="lg:col-span-3">
+        <div class="flex items-center gap-2 mb-3">
+          <span class="px-2.5 py-1 rounded-md bg-ink text-paper text-[11px] font-semibold tracking-wider">APERÇU DU RÉSULTAT</span>
+          <span class="text-xs text-ink/50">Se met à jour en temps réel</span>
+        </div>
+        <div id="quote-preview" class="bg-white rounded-2xl shadow-lift border border-ink/5 overflow-hidden">
+          <!-- top -->
+          <div class="px-7 py-6 grid grid-cols-2 gap-6 border-b border-ink/5">
+            <div>
+              <div class="inline-flex items-center justify-center w-9 h-9 rounded-md bg-ink text-paper mb-3">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 3h7l3 3v7H3z" stroke="#e75a1f" stroke-width="1.6"/></svg>
+              </div>
+              <div class="font-bold tracking-tight">DUPONT SARL</div>
+              <div class="text-xs text-ink/50 leading-relaxed">
+                12, rue des Artisans<br/>
+                75012 Paris<br/>
+                SIRET 812 345 678 00012
+              </div>
+            </div>
+            <div class="text-right">
+              <div class="text-[11px] tracking-[0.18em] text-ink/40 font-semibold">DEVIS</div>
+              <div class="mt-1 text-2xl font-bold tracking-tight num">N° 2026-<span id="q-num">0142</span></div>
+              <div class="mt-3 text-xs text-ink/50">
+                Établi le <span class="num">24/05/2026</span><br/>
+                Valable 30 jours<br/>
+                Client : <span id="q-client" class="font-semibold text-ink">M. Martin</span>
+              </div>
+            </div>
+          </div>
+          <!-- title row -->
+          <div class="px-7 pt-6 pb-3 flex items-center justify-between">
+            <div>
+              <div class="text-[11px] tracking-wider text-ink/40 font-semibold">PRESTATION</div>
+              <div id="q-title" class="text-lg font-bold tracking-tight">Plomberie — Salle de bain</div>
+            </div>
+            <div class="text-right">
+              <div class="text-[11px] tracking-wider text-ink/40 font-semibold">QUANTITÉ</div>
+              <div class="num font-semibold"><span id="q-qty">8</span> <span id="q-unit">m²</span></div>
+            </div>
+          </div>
+          <!-- table -->
+          <div class="px-7 pb-3">
+            <div class="grid grid-cols-12 text-[11px] tracking-wider text-ink/40 font-semibold pb-3 border-b border-ink/10">
+              <div class="col-span-7">DÉSIGNATION</div>
+              <div class="col-span-2 text-right">QTÉ</div>
+              <div class="col-span-3 text-right">TOTAL HT</div>
+            </div>
+            <div id="q-lines" class="divide-y divide-ink/5 text-sm"></div>
+          </div>
+          <!-- totals -->
+          <div class="px-7 pb-7">
+            <div class="bg-paper-100 rounded-xl p-5 space-y-2 text-sm">
+              <div class="flex justify-between text-ink/60"><span>Total HT</span><span class="num" id="q-ht">0,00 €</span></div>
+              <div class="flex justify-between text-ink/60"><span>TVA 20%</span><span class="num" id="q-tva">0,00 €</span></div>
+              <div class="flex justify-between pt-3 mt-2 border-t border-ink/10 items-baseline">
+                <span class="font-bold">Total TTC</span>
+                <span class="num font-extrabold text-chantier text-2xl" id="q-ttc">0,00 €</span>
+              </div>
+            </div>
+            <div class="mt-4 flex items-center justify-between text-xs text-ink/50">
+              <span>Mentions légales et conditions au verso · TVA non applicable art. 293 B du CGI si nécessaire.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================== AVANTAGES -->
+<section id="avantages" class="relative">
+  <div class="max-w-7xl mx-auto px-5 lg:px-8 py-20 lg:py-28">
+    <div class="max-w-3xl">
+      <div class="inline-flex items-center gap-2 text-xs font-semibold tracking-[0.18em] text-chantier">
+        <span class="w-6 h-px bg-chantier"></span> POURQUOI DEVISIA
+      </div>
+      <h2 class="mt-4 text-4xl lg:text-5xl font-extrabold tracking-tight">Quatre raisons de s'y mettre.</h2>
+    </div>
+
+    <div class="mt-12 grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <!-- Rapide -->
+      <div class="rounded-2xl border border-ink/10 bg-white p-7 hover:shadow-soft hover:-translate-y-0.5 transition">
+        <div class="w-11 h-11 rounded-lg bg-chantier-soft text-chantier flex items-center justify-center">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="13" r="8" stroke="currentColor" stroke-width="1.8"/><path d="M12 9v4l3 2M9 2h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </div>
+        <div class="mt-5 text-lg font-bold tracking-tight">Rapide</div>
+        <p class="mt-1.5 text-sm text-ink/60 leading-relaxed">3 minutes au lieu de 45. Vous récupérez vos soirées, votre week-end, et un peu de patience pour les vrais chantiers.</p>
+      </div>
+      <!-- Pro -->
+      <div class="rounded-2xl border border-ink/10 bg-white p-7 hover:shadow-soft hover:-translate-y-0.5 transition">
+        <div class="w-11 h-11 rounded-lg bg-chantier-soft text-chantier flex items-center justify-center">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M6 3h9l4 4v14H6z" stroke="currentColor" stroke-width="1.8"/><path d="M14 3v5h5M9 13h7M9 16h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </div>
+        <div class="mt-5 text-lg font-bold tracking-tight">Pro</div>
+        <p class="mt-1.5 text-sm text-ink/60 leading-relaxed">PDF conforme, mentions légales, TVA, RIB, conditions générales. Tout est prêt pour passer en compta.</p>
+      </div>
+      <!-- Simple -->
+      <div class="rounded-2xl border border-ink/10 bg-white p-7 hover:shadow-soft hover:-translate-y-0.5 transition">
+        <div class="w-11 h-11 rounded-lg bg-chantier-soft text-chantier flex items-center justify-center">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="6" y="2" width="12" height="20" rx="2" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="18" r="1" fill="currentColor"/></svg>
+        </div>
+        <div class="mt-5 text-lg font-bold tracking-tight">Simple</div>
+        <p class="mt-1.5 text-sm text-ink/60 leading-relaxed">Aucune formation requise. Si vous savez envoyer un SMS, vous savez utiliser DevisIA. Sur le téléphone, depuis la camionnette.</p>
+      </div>
+      <!-- Sûr -->
+      <div class="rounded-2xl border border-ink/10 bg-white p-7 hover:shadow-soft hover:-translate-y-0.5 transition">
+        <div class="w-11 h-11 rounded-lg bg-chantier-soft text-chantier flex items-center justify-center">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6l8-3z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="mt-5 text-lg font-bold tracking-tight">Sûr</div>
+        <p class="mt-1.5 text-sm text-ink/60 leading-relaxed">Vos données restent les vôtres. Hébergées en France. Pas de revente, pas d'utilisation détournée. Point.</p>
+      </div>
+    </div>
+
+    <!-- testimonial strip -->
+    <div class="mt-14 rounded-2xl bg-paper-100 border border-ink/5 p-8 lg:p-10 grid lg:grid-cols-3 gap-6 lg:gap-10 items-center">
+      <div class="lg:col-span-2">
+        <div class="text-xs font-semibold tracking-[0.18em] text-chantier">CE QU'EN DISENT LES PREMIERS</div>
+        <p class="mt-3 text-xl lg:text-2xl leading-snug font-medium tracking-tight">
+          « Avant, je faisais mes devis le soir sur un coin de table. Maintenant je les envoie depuis la camionnette avant de quitter le chantier. Le client a déjà signé quand je rentre. »
+        </p>
+        <div class="mt-4 text-sm text-ink/60">— <span class="font-semibold text-ink">Karim B.</span>, plombier-chauffagiste, Lyon</div>
+      </div>
+      <div class="lg:col-span-1 grid grid-cols-3 lg:grid-cols-1 gap-4">
+        <div>
+          <div class="text-3xl font-extrabold num tracking-tight">+5h</div>
+          <div class="text-xs text-ink/60">gagnées chaque semaine</div>
+        </div>
+        <div>
+          <div class="text-3xl font-extrabold num tracking-tight">×2,3</div>
+          <div class="text-xs text-ink/60">de taux de signature</div>
+        </div>
+        <div>
+          <div class="text-3xl font-extrabold num tracking-tight">98%</div>
+          <div class="text-xs text-ink/60">le recommanderaient</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================== CTA FINAL -->
+<section id="cta" class="relative overflow-hidden">
+  <div class="max-w-7xl mx-auto px-5 lg:px-8 pb-24">
+    <div class="relative rounded-3xl bg-ink text-paper overflow-hidden">
+      <div class="absolute inset-0 dotted opacity-[0.08]"></div>
+      <div class="absolute -right-20 -bottom-20 w-[420px] h-[420px] rounded-full bg-chantier/20 blur-3xl"></div>
+      <div class="relative px-7 lg:px-16 py-16 lg:py-24 grid lg:grid-cols-12 gap-10 items-center">
+        <div class="lg:col-span-7">
+          <div class="inline-flex items-center gap-2 text-xs font-semibold tracking-[0.18em] text-chantier">
+            <span class="w-6 h-px bg-chantier"></span> ON Y VA ?
+          </div>
+          <h2 class="mt-4 text-4xl lg:text-6xl font-extrabold tracking-tight leading-[1.03]">
+            Prêt à gagner<br/>
+            <span class="text-chantier">5 heures</span> par semaine ?
+          </h2>
+          <p class="mt-5 text-lg text-paper/60 max-w-xl">Sans carte bancaire. Sans engagement. Sans formation. Vous créez votre premier devis dans la minute qui suit.</p>
+          <div class="mt-8 flex flex-col sm:flex-row gap-3">
+            <a href="https://cheery-crisp-edf241.netlify.app/" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center gap-2 px-6 py-4 rounded-xl bg-chantier text-white font-semibold hover:bg-chantier-dark transition">
+              Commencer gratuitement
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </a>
+            <a href="#apercu" class="inline-flex items-center justify-center gap-2 px-6 py-4 rounded-xl border border-paper/20 text-paper font-semibold hover:bg-paper/5 transition">
+              Reprendre la démo
+            </a>
+          </div>
+          <div class="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-paper/50">
+            <span class="flex items-center gap-2"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M5 12l4 4 10-10" stroke="#e75a1f" stroke-width="2.5" stroke-linecap="round"/></svg>Sans carte bancaire</span>
+            <span class="flex items-center gap-2"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M5 12l4 4 10-10" stroke="#e75a1f" stroke-width="2.5" stroke-linecap="round"/></svg>Annulable à tout moment</span>
+            <span class="flex items-center gap-2"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M5 12l4 4 10-10" stroke="#e75a1f" stroke-width="2.5" stroke-linecap="round"/></svg>Données hébergées en France</span>
+          </div>
+        </div>
+        <div class="lg:col-span-5">
+          <!-- callout card -->
+          <div class="rounded-2xl bg-paper/5 border border-paper/10 p-6 backdrop-blur-sm">
+            <div class="flex items-center justify-between">
+              <div class="text-xs tracking-wider text-paper/50 font-semibold">EN MOYENNE</div>
+              <div class="px-2 py-0.5 rounded-md bg-chantier text-white text-[10px] font-bold tracking-wider">×15 PLUS RAPIDE</div>
+            </div>
+            <div class="mt-5 space-y-4">
+              <div>
+                <div class="flex justify-between text-sm mb-1.5"><span class="text-paper/70">À la main</span><span class="num text-paper/40">45 min</span></div>
+                <div class="h-2.5 rounded-full bg-paper/10 overflow-hidden">
+                  <div class="h-full bg-paper/30" style="width:100%"></div>
+                </div>
+              </div>
+              <div>
+                <div class="flex justify-between text-sm mb-1.5"><span class="text-paper/70">Avec un tableur</span><span class="num text-paper/40">22 min</span></div>
+                <div class="h-2.5 rounded-full bg-paper/10 overflow-hidden">
+                  <div class="h-full bg-paper/50" style="width:48%"></div>
+                </div>
+              </div>
+              <div>
+                <div class="flex justify-between text-sm mb-1.5"><span class="text-chantier font-semibold">Avec DevisIA</span><span class="num text-chantier font-semibold">3 min</span></div>
+                <div class="h-2.5 rounded-full bg-paper/10 overflow-hidden">
+                  <div class="h-full bg-chantier" style="width:7%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================== FOOTER -->
+<footer class="border-t border-ink/10">
+  <div class="max-w-7xl mx-auto px-5 lg:px-8 py-12 grid md:grid-cols-3 gap-8">
+    <div>
+      <div class="flex items-center gap-2.5">
+        <span class="inline-flex items-center justify-center w-8 h-8 rounded-md bg-ink text-paper">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 3h7l3 3v7H3z" stroke="#e75a1f" stroke-width="1.6"/></svg>
+        </span>
+        <span class="font-bold text-[17px] tracking-tight">DevisIA</span>
+      </div>
+      <p class="mt-3 text-sm text-ink/60 max-w-xs">Fait pour les artisans, par des gens qui comprennent votre métier.</p>
+    </div>
+    <div class="md:col-span-2 grid grid-cols-2 sm:grid-cols-3 gap-6 text-sm">
+      <div>
+        <div class="text-xs font-semibold tracking-wider text-ink/40 mb-3">PRODUIT</div>
+        <ul class="space-y-2">
+          <li><a href="#apercu" class="hover:text-chantier">Aperçu</a></li>
+          <li><a href="#avantages" class="hover:text-chantier">Avantages</a></li>
+          <li><a href="#cta" class="hover:text-chantier">Essai gratuit</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="text-xs font-semibold tracking-wider text-ink/40 mb-3">LÉGAL</div>
+        <ul class="space-y-2">
+          <li><a href="#" class="hover:text-chantier">Mentions légales</a></li>
+          <li><a href="#" class="hover:text-chantier">Confidentialité</a></li>
+          <li><a href="#" class="hover:text-chantier">CGU</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="text-xs font-semibold tracking-wider text-ink/40 mb-3">CONTACT</div>
+        <ul class="space-y-2">
+          <li><a href="mailto:bonjour@devisia.fr" class="hover:text-chantier">bonjour@devisia.fr</a></li>
+          <li><a href="#" class="hover:text-chantier">Support</a></li>
+          <li class="text-ink/50">Lun–Ven · 9h–18h</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="border-t border-ink/10 py-5 text-xs text-ink/40">
+    <div class="max-w-7xl mx-auto px-5 lg:px-8 flex flex-col sm:flex-row gap-2 sm:gap-0 justify-between">
+      <div>© 2026 DevisIA · Hébergé en France 🇫🇷</div>
+      <div>Conçu avec soin pour les pros du bâtiment.</div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // ============================== Interactive form / quote preview
+  const state = {
+    presta: 'Plomberie',
+    desc: '',
+    qty: 8,
+    unit: 'm²',
+    client: 'M. Martin',
+  };
+
+  // Auto-generated quote lines per prestation
+  const lineLibrary = {
+    'Plomberie': [
+      { label: 'Dépose et évacuation existant', qty: '1 forfait', price: 300 },
+      { label: 'Fourniture & pose équipement', qty: '1 ens.', price: 850 },
+      { label: 'Raccordement & mise en service', qty: '1 forfait', price: 220 },
+    ],
+    'Électricité': [
+      { label: 'Tirage de câbles + saignées', qty: '1 forfait', price: 380 },
+      { label: 'Fourniture & pose appareillage', qty: '1 ens.', price: 540 },
+      { label: 'Mise en sécurité tableau', qty: '1 forfait', price: 260 },
+    ],
+    'Peinture': [
+      { label: 'Préparation des supports', qty: '1 forfait', price: 240 },
+      { label: 'Application 2 couches mat', qty: 'm²', price: 28 },
+      { label: 'Protections & nettoyage chantier', qty: '1 forfait', price: 120 },
+    ],
+    'Maçonnerie': [
+      { label: 'Démolition & évacuation gravats', qty: '1 forfait', price: 420 },
+      { label: 'Maçonnerie traditionnelle', qty: 'm²', price: 95 },
+      { label: 'Reprise et enduit de finition', qty: '1 forfait', price: 280 },
+    ],
+    'Menuiserie': [
+      { label: 'Dépose de l\'existant', qty: '1 forfait', price: 220 },
+      { label: 'Fourniture & pose bois massif', qty: 'ml', price: 78 },
+      { label: 'Quincaillerie & finitions', qty: '1 forfait', price: 180 },
+    ],
+    'Autre': [
+      { label: 'Préparation & main d\'œuvre', qty: '1 forfait', price: 260 },
+      { label: 'Fourniture matériaux', qty: '1 ens.', price: 540 },
+      { label: 'Finitions & nettoyage', qty: '1 forfait', price: 140 },
+    ],
+  };
+
+  const titleByPresta = {
+    'Plomberie': 'Plomberie — Salle de bain',
+    'Électricité': 'Électricité — Mise aux normes',
+    'Peinture': 'Peinture — Rafraîchissement',
+    'Maçonnerie': 'Maçonnerie — Reprise mur porteur',
+    'Menuiserie': 'Menuiserie — Pose sur mesure',
+    'Autre': 'Prestation sur mesure',
+  };
+
+  const fmt = (n) => new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n) + ' €';
+
+  function renderQuote() {
+    document.getElementById('q-client').textContent = state.client || 'À renseigner';
+    document.getElementById('q-title').textContent = titleByPresta[state.presta] || 'Prestation';
+    document.getElementById('q-qty').textContent = state.qty || 0;
+    document.getElementById('q-unit').textContent = state.unit;
+
+    const lines = lineLibrary[state.presta] || lineLibrary['Autre'];
+    // For quantity-driven lines (m², ml, h), scale the unit-price line by qty
+    let lineNodes = '';
+    let totalHT = 0;
+    lines.forEach((l, i) => {
+      let q = l.qty, total = l.price;
+      if (l.qty === 'm²' || l.qty === 'ml' || l.qty === 'h') {
+        q = `${state.qty} ${l.qty}`;
+        total = l.price * (Number(state.qty) || 0);
+      }
+      totalHT += total;
+      lineNodes += `
+        <div class="grid grid-cols-12 py-3.5 fade-in">
+          <div class="col-span-7 flex gap-3">
+            <span class="text-ink/40 num">${i+1}</span>
+            <span>${l.label}</span>
+          </div>
+          <div class="col-span-2 text-right num text-ink/60">${q}</div>
+          <div class="col-span-3 text-right num font-semibold">${fmt(total)}</div>
+        </div>`;
+    });
+    // If user typed a description, add one extra line
+    if (state.desc && state.desc.trim().length > 4) {
+      const desc = state.desc.trim().slice(0, 80);
+      const extra = 180;
+      totalHT += extra;
+      lineNodes += `
+        <div class="grid grid-cols-12 py-3.5 fade-in">
+          <div class="col-span-7 flex gap-3">
+            <span class="text-ink/40 num">${lines.length+1}</span>
+            <span>${desc}${state.desc.length > 80 ? '…' : ''}</span>
+          </div>
+          <div class="col-span-2 text-right num text-ink/60">1 forfait</div>
+          <div class="col-span-3 text-right num font-semibold">${fmt(extra)}</div>
+        </div>`;
+    }
+    document.getElementById('q-lines').innerHTML = lineNodes;
+    const tva = totalHT * 0.20;
+    document.getElementById('q-ht').textContent = fmt(totalHT);
+    document.getElementById('q-tva').textContent = fmt(tva);
+    document.getElementById('q-ttc').textContent = fmt(totalHT + tva);
+  }
+
+  function renderProgress() {
+    const filled = [
+      !!state.presta,
+      state.desc.length > 4,
+      Number(state.qty) > 0,
+      state.client.trim().length > 1,
+    ].filter(Boolean).length;
+    const pct = Math.round((filled / 4) * 100);
+    const bar = document.getElementById('form-progress');
+    bar.style.setProperty('--p', pct + '%');
+    document.getElementById('completion').textContent = pct + '%';
+  }
+
+  // Prestation buttons
+  const prestaBtns = document.querySelectorAll('.presta-btn');
+  function paintPresta() {
+    prestaBtns.forEach(b => {
+      const active = b.dataset.presta === state.presta;
+      b.className = 'presta-btn px-3 py-2.5 rounded-lg border text-sm font-medium transition flex items-center justify-center gap-1.5 ' +
+        (active
+          ? 'border-chantier bg-chantier-soft text-chantier-dark'
+          : 'border-ink/15 bg-white text-ink/70 hover:border-ink/40');
+    });
+  }
+  prestaBtns.forEach(b => b.addEventListener('click', () => {
+    state.presta = b.dataset.presta;
+    paintPresta();
+    renderQuote();
+    renderProgress();
+  }));
+
+  // Inputs
+  const $desc = document.getElementById('f-desc');
+  const $qty = document.getElementById('f-qty');
+  const $unit = document.getElementById('f-unit');
+  const $client = document.getElementById('f-client');
+  $desc.addEventListener('input', e => { state.desc = e.target.value; renderQuote(); renderProgress(); });
+  $qty.addEventListener('input', e => { state.qty = Number(e.target.value) || 0; renderQuote(); renderProgress(); });
+  $unit.addEventListener('change', e => { state.unit = e.target.value; renderQuote(); });
+  $client.addEventListener('input', e => { state.client = e.target.value; renderQuote(); renderProgress(); });
+  $client.value = state.client;
+
+  // Generate button — visual only
+  const $gen = document.getElementById('generate-btn');
+  const $genLabel = document.getElementById('gen-label');
+  $gen.addEventListener('click', () => {
+    $gen.disabled = true;
+    $genLabel.textContent = 'Génération en cours…';
+    $gen.classList.add('animate-pulse');
+    setTimeout(() => {
+      $genLabel.textContent = '✓ Devis prêt — voir l\'aperçu →';
+      $gen.classList.remove('animate-pulse');
+      $gen.classList.remove('bg-chantier');
+      $gen.classList.add('bg-forest');
+      // bump quote number
+      const cur = document.getElementById('q-num');
+      cur.textContent = String(Number(cur.textContent) + 1).padStart(4, '0');
+      setTimeout(() => {
+        $gen.disabled = false;
+        $genLabel.textContent = 'Générer le devis';
+        $gen.classList.remove('bg-forest');
+        $gen.classList.add('bg-chantier');
+      }, 2200);
+    }, 1100);
+  });
+
+  // initial paint
+  paintPresta();
+  renderQuote();
+  renderProgress();
+</script>
+
+</body>
+</html>
