@@ -32,6 +32,10 @@
     textarea:focus, input:focus { outline: none; }
     .card { background: white; border: 1px solid #e5e5e0; border-radius: 12px; }
     .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+    .input-inline { background: transparent; border: none; border-bottom: 1px solid #e5e5e0; outline: none; width: 100%; font-size: inherit; color: inherit; font-family: inherit; padding: 2px 0; transition: border-color 0.15s; }
+    .input-inline:focus { border-bottom-color: #e75a1f; }
+    .pdf-mode .input-inline { border-bottom: none !important; pointer-events: none; }
+    .pdf-mode .no-print { display: none !important; }
   </style>
 </head>
 <body class="min-h-screen">
@@ -304,11 +308,18 @@
               <th class="text-center px-3 py-2 font-semibold text-ink">Qté</th>
               <th class="text-center px-3 py-2 font-semibold text-ink">Unité</th>
               <th class="text-right px-3 py-2 font-semibold text-ink">PU HT</th>
-              <th class="text-right px-3 py-2 font-semibold text-ink rounded-tr-lg">Total HT</th>
+              <th class="text-right px-3 py-2 font-semibold text-ink">Total HT</th>
+              <th class="no-print px-2 py-2 rounded-tr-lg"></th>
             </tr>
           </thead>
           <tbody id="devis-lignes" class="divide-y divide-line"></tbody>
         </table>
+      </div>
+      <div class="no-print mt-2 pl-1">
+        <button onclick="ajouterLigne()" class="text-sm text-orange-500 hover:text-orange-600 transition font-medium flex items-center gap-1">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          Ajouter une ligne
+        </button>
       </div>
       <div class="flex justify-end">
         <div class="w-64 space-y-2">
@@ -338,6 +349,53 @@
   <script>
     // AUTH
     let utilisateurCourant = null;
+    let devisTauxTva = 10;
+
+    function escapeAttr(str) {
+      return String(str || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+    }
+
+    function creerLigneTr(l) {
+      const qte = parseFloat(l.quantite) || 0;
+      const pu = parseFloat(l.prix_unitaire_ht) || 0;
+      const tr = document.createElement('tr');
+      tr.className = 'hover:bg-orange-50 transition-colors';
+      tr.innerHTML = `
+        <td class="px-3 py-2 text-ink"><input type="text" class="input-inline" value="${escapeAttr(l.designation)}" oninput="recalculerTotaux()" /></td>
+        <td class="px-3 py-2 text-center text-muted"><input type="number" class="input-inline text-center" style="width:3.5rem" value="${qte}" min="0" step="any" oninput="recalculerTotaux()" /></td>
+        <td class="px-3 py-2 text-center text-muted"><input type="text" class="input-inline text-center" style="width:3.5rem" value="${escapeAttr(l.unite)}" oninput="recalculerTotaux()" /></td>
+        <td class="px-3 py-2 text-right text-muted"><input type="number" class="input-inline text-right" style="width:5rem" value="${pu}" min="0" step="0.01" oninput="recalculerTotaux()" /></td>
+        <td class="px-3 py-2 text-right font-medium text-ink montant-ligne">${fp(qte * pu)}</td>
+        <td class="no-print px-2 py-2 text-center"><button onclick="supprimerLigne(this)" class="text-muted hover:text-red-500 transition text-xl leading-none font-light" title="Supprimer la ligne">&times;</button></td>
+      `;
+      return tr;
+    }
+
+    function recalculerTotaux() {
+      let totalHt = 0;
+      document.querySelectorAll('#devis-lignes tr').forEach(tr => {
+        const inputs = tr.querySelectorAll('input');
+        const qte = parseFloat(inputs[1].value) || 0;
+        const pu = parseFloat(inputs[3].value) || 0;
+        const montant = qte * pu;
+        totalHt += montant;
+        tr.querySelector('.montant-ligne').textContent = fp(montant);
+      });
+      const tauxTva = devisTauxTva / 100;
+      const montantTva = totalHt * tauxTva;
+      document.getElementById('total-ht').textContent = fp(totalHt);
+      document.getElementById('total-tva').textContent = fp(montantTva);
+      document.getElementById('total-ttc').textContent = fp(totalHt + montantTva);
+    }
+
+    function supprimerLigne(btn) {
+      btn.closest('tr').remove();
+      recalculerTotaux();
+    }
+
+    function ajouterLigne() {
+      document.getElementById('devis-lignes').appendChild(creerLigneTr({ designation: '', quantite: 1, unite: 'u', prix_unitaire_ht: 0 }));
+    }
 
     async function initAuth() {
       if (!sb) return;
@@ -591,20 +649,19 @@
       document.getElementById('client-ville-affiche').textContent = client.ville || '';
       document.getElementById('devis-titre').textContent = data.titre || 'Travaux';
 
+      devisTauxTva = parseFloat(tva);
       const tbody = document.getElementById('devis-lignes'); tbody.innerHTML = '';
-      let totalHt = 0;
-      (data.lignes || []).forEach(l => {
-        const montant = l.quantite * l.prix_unitaire_ht; totalHt += montant;
-        const tr = document.createElement('tr'); tr.className = 'hover:bg-orange-50 transition-colors';
-        tr.innerHTML = `<td class="px-3 py-3 text-ink">${l.designation}</td><td class="px-3 py-3 text-center text-muted">${l.quantite}</td><td class="px-3 py-3 text-center text-muted">${l.unite}</td><td class="px-3 py-3 text-right text-muted">${fp(l.prix_unitaire_ht)}</td><td class="px-3 py-3 text-right font-medium text-ink">${fp(montant)}</td>`;
-        tbody.appendChild(tr);
-      });
+      (data.lignes || []).forEach(l => tbody.appendChild(creerLigneTr(l)));
 
-      const tauxTva = parseFloat(tva) / 100;
-      const montantTva = totalHt * tauxTva;
+      document.getElementById('label-tva').textContent = `TVA (${tva}%)`;
+      let totalHt = 0, montantTva = 0;
+      document.querySelectorAll('#devis-lignes tr').forEach(tr => {
+        const inputs = tr.querySelectorAll('input');
+        totalHt += (parseFloat(inputs[1].value) || 0) * (parseFloat(inputs[3].value) || 0);
+      });
+      montantTva = totalHt * devisTauxTva / 100;
       const totalTtc = totalHt + montantTva;
       document.getElementById('total-ht').textContent = fp(totalHt);
-      document.getElementById('label-tva').textContent = `TVA (${tva}%)`;
       document.getElementById('total-tva').textContent = fp(montantTva);
       document.getElementById('total-ttc').textContent = fp(totalTtc);
       document.getElementById('conditions-affichees').textContent = artisan.conditions ? 'Conditions de paiement : ' + artisan.conditions : 'Conditions de paiement : Chèque ou virement bancaire.';
@@ -621,9 +678,13 @@
     const fp = (n) => new Intl.NumberFormat('fr-FR', { style:'currency', currency:'EUR' }).format(n);
 
     function telechargerPDF() {
+      const pdfEl = document.getElementById('devis-pdf');
+      pdfEl.classList.add('pdf-mode');
       const nom = document.getElementById('client-nom-affiche').textContent.replace(/\s+/g,'_') || 'Client';
       const date = new Date().toISOString().slice(0,10);
-      html2pdf().set({ margin:[10,10,10,10], filename:`Devis_${nom}_${date}.pdf`, image:{type:'jpeg',quality:0.98}, html2canvas:{scale:2,useCORS:true}, jsPDF:{unit:'mm',format:'a4',orientation:'portrait'} }).from(document.getElementById('devis-pdf')).save();
+      html2pdf().set({ margin:[10,10,10,10], filename:`Devis_${nom}_${date}.pdf`, image:{type:'jpeg',quality:0.98}, html2canvas:{scale:2,useCORS:true}, jsPDF:{unit:'mm',format:'a4',orientation:'portrait'} })
+        .from(pdfEl).save()
+        .then(() => pdfEl.classList.remove('pdf-mode'));
     }
 
     function afficherErreur(m) { document.getElementById('msg-erreur').textContent = '⚠️ ' + m; document.getElementById('zone-erreur').classList.remove('hidden'); }
