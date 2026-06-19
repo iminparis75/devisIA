@@ -43,8 +43,8 @@
     /* Lot subtotal row */
     .lot-subtotal td { background: #f9f9f7; font-style: italic; }
     /* Lot lines hidden in vue-client mode */
-    .lot-groupe.vue-client .lot-ligne { display: none; }
-    .lot-groupe.vue-client .lot-ajouter { display: none !important; }
+    .lot-ligne.vue-client { display: none; }
+    .lot-ajouter.vue-client { display: none !important; }
     /* Toggle pill */
     .toggle-pill { display: inline-flex; align-items: center; border-radius: 9999px; border: 1px solid #e5e5e0; background: white; overflow: hidden; }
     .toggle-pill button { padding: 0.35rem 0.85rem; font-size: 0.75rem; font-weight: 500; transition: background 0.15s, color 0.15s; white-space: nowrap; }
@@ -325,7 +325,7 @@
       <p id="devis-titre" class="font-semibold text-ink"></p>
       <!-- Colonne d'en-tête du tableau (fixe, commune à tous les lots) -->
       <div class="overflow-x-auto">
-        <table class="w-full text-sm">
+        <table class="w-full text-sm table-fixed">
           <colgroup>
             <col />
             <col style="width:4.5rem" />
@@ -399,16 +399,15 @@
       return tr;
     }
 
-    // Crée l'ensemble des <tr> pour un lot (en-tête + lignes + bouton ajout + sous-total)
-    // Retourne un <tbody> avec la classe lot-groupe et data-lot-index
-    function creerLotTbody(lot, lotIndex) {
-      const tbody = document.createElement('tbody');
-      tbody.className = 'lot-groupe divide-y divide-line';
-      tbody.dataset.lotIndex = lotIndex;
+    // Crée les <tr> d'un lot (en-tête + lignes + bouton ajout + sous-total)
+    // Retourne un DocumentFragment de TR — tous injectés dans le seul <tbody id="devis-lots">
+    function creerLotRows(lot, lotIndex) {
+      const frag = document.createDocumentFragment();
 
       // En-tête du lot
       const trHeader = document.createElement('tr');
       trHeader.className = 'lot-header';
+      trHeader.dataset.lot = lotIndex;
       trHeader.innerHTML = `
         <td colspan="5" class="px-3 py-2 text-sm">
           <input type="text" class="input-inline font-semibold text-ink" value="${escapeAttr(lot.nom)}" oninput="recalculerTotaux()" style="font-weight:600;" />
@@ -420,14 +419,19 @@
           </button>
         </td>
       `;
-      tbody.appendChild(trHeader);
+      frag.appendChild(trHeader);
 
       // Lignes du lot
-      lot.lignes.forEach(l => tbody.appendChild(creerLigneTr(l, lotIndex)));
+      lot.lignes.forEach(l => {
+        const tr = creerLigneTr(l, lotIndex);
+        tr.dataset.lot = lotIndex;
+        frag.appendChild(tr);
+      });
 
-      // Bouton "Ajouter une ligne" (affiché uniquement en vue détaillée)
+      // Bouton "Ajouter une ligne"
       const trAjouter = document.createElement('tr');
       trAjouter.className = 'lot-ajouter no-print';
+      trAjouter.dataset.lot = lotIndex;
       trAjouter.innerHTML = `
         <td colspan="6" class="px-3 py-1.5">
           <button onclick="ajouterLigneLot(this)" data-lot-index="${lotIndex}" class="text-sm text-orange-500 hover:text-orange-600 transition font-medium flex items-center gap-1">
@@ -436,27 +440,31 @@
           </button>
         </td>
       `;
-      tbody.appendChild(trAjouter);
+      frag.appendChild(trAjouter);
 
       // Sous-total du lot
       const trSousTotal = document.createElement('tr');
       trSousTotal.className = 'lot-subtotal';
+      trSousTotal.dataset.lot = lotIndex;
       trSousTotal.innerHTML = `
         <td colspan="4" class="px-3 py-2 text-sm text-right text-muted">Sous-total lot</td>
         <td class="px-3 py-2 text-right font-medium text-ink sous-total-lot"></td>
         <td class="no-print px-2"></td>
       `;
-      tbody.appendChild(trSousTotal);
+      frag.appendChild(trSousTotal);
 
-      return tbody;
+      return frag;
     }
 
     function recalculerTotaux() {
       let totalHtGlobal = 0;
 
-      document.querySelectorAll('#devis-lots .lot-groupe').forEach(tbody => {
+      const lotsIndex = new Set(
+        Array.from(document.querySelectorAll('#devis-lots .lot-ligne[data-lot]')).map(tr => tr.dataset.lot)
+      );
+      lotsIndex.forEach(lotIndex => {
         let sousTotal = 0;
-        tbody.querySelectorAll('.lot-ligne').forEach(tr => {
+        document.querySelectorAll(`#devis-lots .lot-ligne[data-lot="${lotIndex}"]`).forEach(tr => {
           const inputs = tr.querySelectorAll('input');
           const qte = parseFloat(inputs[0].value) || 0;
           const pu = parseFloat(inputs[2].value) || 0;
@@ -464,7 +472,7 @@
           sousTotal += montant;
           tr.querySelector('.montant-ligne').textContent = fp(montant);
         });
-        const cellSousTotal = tbody.querySelector('.sous-total-lot');
+        const cellSousTotal = document.querySelector(`#devis-lots .lot-subtotal[data-lot="${lotIndex}"] .sous-total-lot`);
         if (cellSousTotal) cellSousTotal.textContent = fp(sousTotal);
         totalHtGlobal += sousTotal;
       });
@@ -484,10 +492,11 @@
     // Ajoute une ligne dans le lot correspondant (avant le tr sous-total)
     function ajouterLigneLot(btn) {
       const lotIndex = btn.dataset.lotIndex;
-      const tbody = document.querySelector(`#devis-lots .lot-groupe[data-lot-index="${lotIndex}"]`);
-      if (!tbody) return;
-      const trSousTotal = tbody.querySelector('.lot-subtotal');
+      const tbody = document.getElementById('devis-lots');
+      const trSousTotal = tbody.querySelector(`.lot-subtotal[data-lot="${lotIndex}"]`);
+      if (!trSousTotal) return;
       const nouvelleLigne = creerLigneTr({ designation: '', quantite: 1, unite: 'u', prix_unitaire_ht: 0 }, lotIndex);
+      nouvelleLigne.dataset.lot = lotIndex;
       tbody.insertBefore(nouvelleLigne, trSousTotal);
       recalculerTotaux();
     }
@@ -495,26 +504,25 @@
     // Bascule vue client/détaillée pour un lot individuel
     function basculerVueLot(btn) {
       const lotIndex = btn.dataset.lotIndex;
-      const tbody = document.querySelector(`#devis-lots .lot-groupe[data-lot-index="${lotIndex}"]`);
-      if (!tbody) return;
-      const estClient = tbody.classList.toggle('vue-client');
+      const lignes = document.querySelectorAll(`#devis-lots .lot-ligne[data-lot="${lotIndex}"]`);
+      if (!lignes.length) return;
+      const estClient = !lignes[0].classList.contains('vue-client');
+      lignes.forEach(tr => tr.classList.toggle('vue-client', estClient));
+      document.querySelectorAll(`#devis-lots .lot-ajouter[data-lot="${lotIndex}"]`).forEach(tr => tr.classList.toggle('vue-client', estClient));
       btn.querySelector('.oeil-ouvert').classList.toggle('hidden', estClient);
       btn.querySelector('.oeil-ferme').classList.toggle('hidden', !estClient);
-      // Resynchroniser le toggle global si tous les lots sont dans le même état
       syncToggleGlobal();
     }
 
     // Toggle global : bascule tous les lots en même temps
     function basculerVueGlobale(mode) {
       const estClient = mode === 'client';
-      document.querySelectorAll('#devis-lots .lot-groupe').forEach(tbody => {
-        tbody.classList.toggle('vue-client', estClient);
-        // Le bouton oeil est dans le tr.lot-header uniquement
-        const btn = tbody.querySelector('.lot-header button[data-lot-index]');
-        if (btn) {
-          btn.querySelector('.oeil-ouvert').classList.toggle('hidden', estClient);
-          btn.querySelector('.oeil-ferme').classList.toggle('hidden', !estClient);
-        }
+      document.querySelectorAll('#devis-lots .lot-ligne, #devis-lots .lot-ajouter').forEach(tr => {
+        tr.classList.toggle('vue-client', estClient);
+      });
+      document.querySelectorAll('#devis-lots .lot-header button[data-lot-index]').forEach(btn => {
+        btn.querySelector('.oeil-ouvert').classList.toggle('hidden', estClient);
+        btn.querySelector('.oeil-ferme').classList.toggle('hidden', !estClient);
       });
       document.getElementById('btn-vue-detaillee').classList.toggle('actif', !estClient);
       document.getElementById('btn-vue-client').classList.toggle('actif', estClient);
@@ -522,9 +530,10 @@
 
     // Resynchronise l'état du toggle global selon l'état individuel des lots
     function syncToggleGlobal() {
-      const lots = document.querySelectorAll('#devis-lots .lot-groupe');
-      const tousClient = Array.from(lots).every(t => t.classList.contains('vue-client'));
-      const tousDetaillee = Array.from(lots).every(t => !t.classList.contains('vue-client'));
+      const lignes = document.querySelectorAll('#devis-lots .lot-ligne');
+      if (!lignes.length) return;
+      const tousClient = Array.from(lignes).every(t => t.classList.contains('vue-client'));
+      const tousDetaillee = Array.from(lignes).every(t => !t.classList.contains('vue-client'));
       const btnD = document.getElementById('btn-vue-detaillee');
       const btnC = document.getElementById('btn-vue-client');
       if (btnD && btnC) {
@@ -799,9 +808,9 @@
       conteneurLots.innerHTML = '';
       basculerVueGlobale('detaillee');
 
-      // Injecter chaque lot comme un tbody séparé dans #devis-lots
+      // Injecter les TR de chaque lot dans le tbody unique #devis-lots
       (data.lots || []).forEach((lot, index) => {
-        conteneurLots.appendChild(creerLotTbody(lot, index));
+        conteneurLots.appendChild(creerLotRows(lot, index));
       });
 
       // Initialiser la hauteur de chaque textarea désignation
