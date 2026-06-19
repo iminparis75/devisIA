@@ -34,7 +34,9 @@
     .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 1rem; }
     .input-inline { background: transparent; border: none; border-bottom: 1px solid #e5e5e0; outline: none; width: 100%; font-size: inherit; color: inherit; font-family: inherit; padding: 2px 0; transition: border-color 0.15s; }
     .input-inline:focus { border-bottom-color: #e75a1f; }
+    textarea.input-inline { resize: none; overflow: hidden; line-height: 1.4; min-height: 1.6em; display: block; }
     .pdf-mode .input-inline { border-bottom: none !important; pointer-events: none; }
+    .pdf-mode textarea.input-inline { overflow: visible; }
     .pdf-mode .no-print { display: none !important; }
     /* Lot header row */
     .lot-header td { background: #f0efeb; font-weight: 600; }
@@ -323,15 +325,23 @@
       <p id="devis-titre" class="font-semibold text-ink"></p>
       <!-- Colonne d'en-tête du tableau (fixe, commune à tous les lots) -->
       <div class="overflow-x-auto">
-        <table class="w-full text-sm table-fixed">
+        <table class="w-full text-sm">
+          <colgroup>
+            <col />
+            <col style="width:4.5rem" />
+            <col style="width:5.5rem" />
+            <col style="width:6rem" />
+            <col style="width:7rem" />
+            <col style="width:2.5rem" />
+          </colgroup>
           <thead>
             <tr class="bg-chalk">
               <th class="text-left px-3 py-2 font-semibold text-ink rounded-tl-lg">Désignation</th>
-              <th class="text-center px-3 py-2 font-semibold text-ink" style="width:4.5rem">Qté</th>
-              <th class="text-center px-3 py-2 font-semibold text-ink" style="width:5.5rem">Unité</th>
-              <th class="text-right px-3 py-2 font-semibold text-ink" style="width:6rem">PU HT</th>
-              <th class="text-right px-3 py-2 font-semibold text-ink" style="width:7rem">Total HT</th>
-              <th class="no-print px-2 py-2 rounded-tr-lg" style="width:2.5rem"></th>
+              <th class="text-center px-3 py-2 font-semibold text-ink">Qté</th>
+              <th class="text-center px-3 py-2 font-semibold text-ink">Unité</th>
+              <th class="text-right px-3 py-2 font-semibold text-ink">PU HT</th>
+              <th class="text-right px-3 py-2 font-semibold text-ink">Total HT</th>
+              <th class="no-print px-2 py-2 rounded-tr-lg"></th>
             </tr>
           </thead>
           <!-- Les tbody des lots sont injectés ici par JS -->
@@ -379,7 +389,7 @@
       const tr = document.createElement('tr');
       tr.className = 'lot-ligne hover:bg-orange-50 transition-colors';
       tr.innerHTML = `
-        <td class="px-3 py-2 text-ink"><input type="text" class="input-inline" value="${escapeAttr(l.designation)}" oninput="recalculerTotaux()" /></td>
+        <td class="px-3 py-2 text-ink align-top"><textarea class="input-inline" rows="1" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px';recalculerTotaux()">${escapeAttr(l.designation)}</textarea></td>
         <td class="px-3 py-2 text-center text-muted"><input type="number" class="input-inline text-center w-full" value="${qte}" min="0" step="any" oninput="recalculerTotaux()" /></td>
         <td class="px-3 py-2 text-center text-muted"><input type="text" class="input-inline text-center w-full" value="${escapeAttr(l.unite)}" oninput="recalculerTotaux()" /></td>
         <td class="px-3 py-2 text-right text-muted"><input type="number" class="input-inline text-right w-full" value="${pu}" min="0" step="0.01" oninput="recalculerTotaux()" /></td>
@@ -787,6 +797,12 @@
       // Injecter chaque lot comme un tbody séparé dans #devis-lots
       (data.lots || []).forEach((lot, index) => {
         conteneurLots.appendChild(creerLotTbody(lot, index));
+      });
+
+      // Initialiser la hauteur de chaque textarea désignation
+      conteneurLots.querySelectorAll('textarea.input-inline').forEach(ta => {
+        ta.style.height = 'auto';
+        ta.style.height = ta.scrollHeight + 'px';
       });
 
       document.getElementById('label-tva').textContent = `TVA (${tva}%)`;
