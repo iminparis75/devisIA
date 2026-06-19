@@ -36,6 +36,18 @@
     .input-inline:focus { border-bottom-color: #e75a1f; }
     .pdf-mode .input-inline { border-bottom: none !important; pointer-events: none; }
     .pdf-mode .no-print { display: none !important; }
+    /* Lot header row */
+    .lot-header td { background: #f0efeb; font-weight: 600; }
+    /* Lot subtotal row */
+    .lot-subtotal td { background: #f9f9f7; font-style: italic; }
+    /* Lot lines hidden in vue-client mode */
+    .lot-groupe.vue-client .lot-ligne { display: none; }
+    .lot-groupe.vue-client .lot-ajouter { display: none !important; }
+    /* Toggle pill */
+    .toggle-pill { display: inline-flex; align-items: center; border-radius: 9999px; border: 1px solid #e5e5e0; background: white; overflow: hidden; }
+    .toggle-pill button { padding: 0.35rem 0.85rem; font-size: 0.75rem; font-weight: 500; transition: background 0.15s, color 0.15s; white-space: nowrap; }
+    .toggle-pill button.actif { background: #1a1a1a; color: white; }
+    .toggle-pill button:not(.actif) { color: #6b7280; }
   </style>
 </head>
 <body class="min-h-screen">
@@ -276,6 +288,15 @@
         Télécharger PDF
       </button>
     </div>
+    <!-- Toggle global vue — masqué en pdf-mode -->
+    <div id="toggle-vue-global" class="no-print flex items-center gap-3 flex-wrap">
+      <span class="text-sm font-medium text-ink">Vue :</span>
+      <div class="toggle-pill">
+        <button id="btn-vue-detaillee" onclick="basculerVueGlobale('detaillee')" class="actif">Vue détaillée</button>
+        <button id="btn-vue-client" onclick="basculerVueGlobale('client')">Vue client</button>
+      </div>
+      <p class="text-xs text-muted">La vue client masque le détail des lignes par lot.</p>
+    </div>
 
     <div id="devis-pdf" class="card p-8 space-y-6">
       <div class="flex justify-between items-start border-b border-line pb-6">
@@ -300,6 +321,7 @@
         <p id="client-ville-affiche" class="text-sm text-muted"></p>
       </div>
       <p id="devis-titre" class="font-semibold text-ink"></p>
+      <!-- Colonne d'en-tête du tableau (fixe, commune à tous les lots) -->
       <div class="overflow-x-auto">
         <table class="w-full text-sm">
           <thead>
@@ -312,14 +334,9 @@
               <th class="no-print px-2 py-2 rounded-tr-lg"></th>
             </tr>
           </thead>
-          <tbody id="devis-lignes" class="divide-y divide-line"></tbody>
+          <!-- Les tbody des lots sont injectés ici par JS -->
+          <tbody id="devis-lots"></tbody>
         </table>
-      </div>
-      <div class="no-print mt-2 pl-1">
-        <button onclick="ajouterLigne()" class="text-sm text-orange-500 hover:text-orange-600 transition font-medium flex items-center gap-1">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-          Ajouter une ligne
-        </button>
       </div>
       <div class="flex justify-end">
         <div class="w-64 space-y-2">
@@ -355,11 +372,12 @@
       return String(str || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;');
     }
 
-    function creerLigneTr(l) {
+    // Crée une <tr> de ligne éditable, attachée à un tbody de lot identifié par lotIndex
+    function creerLigneTr(l, lotIndex) {
       const qte = parseFloat(l.quantite) || 0;
       const pu = parseFloat(l.prix_unitaire_ht) || 0;
       const tr = document.createElement('tr');
-      tr.className = 'hover:bg-orange-50 transition-colors';
+      tr.className = 'lot-ligne hover:bg-orange-50 transition-colors';
       tr.innerHTML = `
         <td class="px-3 py-2 text-ink"><input type="text" class="input-inline" value="${escapeAttr(l.designation)}" oninput="recalculerTotaux()" /></td>
         <td class="px-3 py-2 text-center text-muted"><input type="number" class="input-inline text-center" style="width:3.5rem" value="${qte}" min="0" step="any" oninput="recalculerTotaux()" /></td>
@@ -371,21 +389,81 @@
       return tr;
     }
 
+    // Crée l'ensemble des <tr> pour un lot (en-tête + lignes + bouton ajout + sous-total)
+    // Retourne un <tbody> avec la classe lot-groupe et data-lot-index
+    function creerLotTbody(lot, lotIndex) {
+      const tbody = document.createElement('tbody');
+      tbody.className = 'lot-groupe divide-y divide-line';
+      tbody.dataset.lotIndex = lotIndex;
+
+      // En-tête du lot
+      const trHeader = document.createElement('tr');
+      trHeader.className = 'lot-header';
+      trHeader.innerHTML = `
+        <td colspan="5" class="px-3 py-2 text-sm">
+          <input type="text" class="input-inline font-semibold text-ink" value="${escapeAttr(lot.nom)}" oninput="recalculerTotaux()" style="font-weight:600;" />
+        </td>
+        <td class="no-print px-2 py-2 text-right">
+          <button onclick="basculerVueLot(this)" data-lot-index="${lotIndex}" class="text-xs text-muted hover:text-ink transition flex items-center gap-1 ml-auto" title="Basculer vue client/détaillée pour ce lot">
+            <svg class="w-4 h-4 oeil-ouvert" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+            <svg class="w-4 h-4 oeil-ferme hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/></svg>
+          </button>
+        </td>
+      `;
+      tbody.appendChild(trHeader);
+
+      // Lignes du lot
+      lot.lignes.forEach(l => tbody.appendChild(creerLigneTr(l, lotIndex)));
+
+      // Bouton "Ajouter une ligne" (affiché uniquement en vue détaillée)
+      const trAjouter = document.createElement('tr');
+      trAjouter.className = 'lot-ajouter no-print';
+      trAjouter.innerHTML = `
+        <td colspan="6" class="px-3 py-1.5">
+          <button onclick="ajouterLigneLot(this)" data-lot-index="${lotIndex}" class="text-sm text-orange-500 hover:text-orange-600 transition font-medium flex items-center gap-1">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Ajouter une ligne
+          </button>
+        </td>
+      `;
+      tbody.appendChild(trAjouter);
+
+      // Sous-total du lot
+      const trSousTotal = document.createElement('tr');
+      trSousTotal.className = 'lot-subtotal';
+      trSousTotal.innerHTML = `
+        <td colspan="4" class="px-3 py-2 text-sm text-right text-muted">Sous-total lot</td>
+        <td class="px-3 py-2 text-right font-medium text-ink sous-total-lot"></td>
+        <td class="no-print px-2"></td>
+      `;
+      tbody.appendChild(trSousTotal);
+
+      return tbody;
+    }
+
     function recalculerTotaux() {
-      let totalHt = 0;
-      document.querySelectorAll('#devis-lignes tr').forEach(tr => {
-        const inputs = tr.querySelectorAll('input');
-        const qte = parseFloat(inputs[1].value) || 0;
-        const pu = parseFloat(inputs[3].value) || 0;
-        const montant = qte * pu;
-        totalHt += montant;
-        tr.querySelector('.montant-ligne').textContent = fp(montant);
+      let totalHtGlobal = 0;
+
+      document.querySelectorAll('#devis-lots .lot-groupe').forEach(tbody => {
+        let sousTotal = 0;
+        tbody.querySelectorAll('.lot-ligne').forEach(tr => {
+          const inputs = tr.querySelectorAll('input');
+          const qte = parseFloat(inputs[1].value) || 0;
+          const pu = parseFloat(inputs[3].value) || 0;
+          const montant = qte * pu;
+          sousTotal += montant;
+          tr.querySelector('.montant-ligne').textContent = fp(montant);
+        });
+        const cellSousTotal = tbody.querySelector('.sous-total-lot');
+        if (cellSousTotal) cellSousTotal.textContent = fp(sousTotal);
+        totalHtGlobal += sousTotal;
       });
+
       const tauxTva = devisTauxTva / 100;
-      const montantTva = totalHt * tauxTva;
-      document.getElementById('total-ht').textContent = fp(totalHt);
+      const montantTva = totalHtGlobal * tauxTva;
+      document.getElementById('total-ht').textContent = fp(totalHtGlobal);
       document.getElementById('total-tva').textContent = fp(montantTva);
-      document.getElementById('total-ttc').textContent = fp(totalHt + montantTva);
+      document.getElementById('total-ttc').textContent = fp(totalHtGlobal + montantTva);
     }
 
     function supprimerLigne(btn) {
@@ -393,8 +471,56 @@
       recalculerTotaux();
     }
 
-    function ajouterLigne() {
-      document.getElementById('devis-lignes').appendChild(creerLigneTr({ designation: '', quantite: 1, unite: 'u', prix_unitaire_ht: 0 }));
+    // Ajoute une ligne dans le lot correspondant (avant le tr sous-total)
+    function ajouterLigneLot(btn) {
+      const lotIndex = btn.dataset.lotIndex;
+      const tbody = document.querySelector(`#devis-lots .lot-groupe[data-lot-index="${lotIndex}"]`);
+      if (!tbody) return;
+      const trSousTotal = tbody.querySelector('.lot-subtotal');
+      const nouvelleLigne = creerLigneTr({ designation: '', quantite: 1, unite: 'u', prix_unitaire_ht: 0 }, lotIndex);
+      tbody.insertBefore(nouvelleLigne, trSousTotal);
+      recalculerTotaux();
+    }
+
+    // Bascule vue client/détaillée pour un lot individuel
+    function basculerVueLot(btn) {
+      const lotIndex = btn.dataset.lotIndex;
+      const tbody = document.querySelector(`#devis-lots .lot-groupe[data-lot-index="${lotIndex}"]`);
+      if (!tbody) return;
+      const estClient = tbody.classList.toggle('vue-client');
+      btn.querySelector('.oeil-ouvert').classList.toggle('hidden', estClient);
+      btn.querySelector('.oeil-ferme').classList.toggle('hidden', !estClient);
+      // Resynchroniser le toggle global si tous les lots sont dans le même état
+      syncToggleGlobal();
+    }
+
+    // Toggle global : bascule tous les lots en même temps
+    function basculerVueGlobale(mode) {
+      const estClient = mode === 'client';
+      document.querySelectorAll('#devis-lots .lot-groupe').forEach(tbody => {
+        tbody.classList.toggle('vue-client', estClient);
+        // Le bouton oeil est dans le tr.lot-header uniquement
+        const btn = tbody.querySelector('.lot-header button[data-lot-index]');
+        if (btn) {
+          btn.querySelector('.oeil-ouvert').classList.toggle('hidden', estClient);
+          btn.querySelector('.oeil-ferme').classList.toggle('hidden', !estClient);
+        }
+      });
+      document.getElementById('btn-vue-detaillee').classList.toggle('actif', !estClient);
+      document.getElementById('btn-vue-client').classList.toggle('actif', estClient);
+    }
+
+    // Resynchronise l'état du toggle global selon l'état individuel des lots
+    function syncToggleGlobal() {
+      const lots = document.querySelectorAll('#devis-lots .lot-groupe');
+      const tousClient = Array.from(lots).every(t => t.classList.contains('vue-client'));
+      const tousDetaillee = Array.from(lots).every(t => !t.classList.contains('vue-client'));
+      const btnD = document.getElementById('btn-vue-detaillee');
+      const btnC = document.getElementById('btn-vue-client');
+      if (btnD && btnC) {
+        btnD.classList.toggle('actif', tousDetaillee);
+        btnC.classList.toggle('actif', tousClient);
+      }
     }
 
     async function initAuth() {
@@ -525,11 +651,13 @@
 
     async function sauvegarderDevisSupabase(devis, client, tva, totalHt, totalTtc, numero) {
       if (!sb || !utilisateurCourant) return;
+      // On sauvegarde devis.lots (structure par lots) dans le champ JSONB "lignes"
+      // pour rester compatible avec le schéma existant sans migration
       await sb.from('devis').insert({
         user_id: utilisateurCourant.id, numero, titre: devis.titre,
         client_nom: client.nom, client_ville: client.ville,
         description: document.getElementById('description').value,
-        tva: parseInt(tva), lignes: devis.lignes, total_ht: totalHt, total_ttc: totalTtc
+        tva: parseInt(tva), lignes: devis.lots, total_ht: totalHt, total_ttc: totalTtc
       });
       document.getElementById('msg-sauvegarde').classList.remove('hidden');
     }
@@ -650,20 +778,29 @@
       document.getElementById('devis-titre').textContent = data.titre || 'Travaux';
 
       devisTauxTva = parseFloat(tva);
-      const tbody = document.getElementById('devis-lignes'); tbody.innerHTML = '';
-      (data.lignes || []).forEach(l => tbody.appendChild(creerLigneTr(l)));
+
+      // Vider le conteneur des lots et remettre le toggle global en mode détaillée
+      const conteneurLots = document.getElementById('devis-lots');
+      conteneurLots.innerHTML = '';
+      basculerVueGlobale('detaillee');
+
+      // Injecter chaque lot comme un tbody séparé dans #devis-lots
+      (data.lots || []).forEach((lot, index) => {
+        conteneurLots.appendChild(creerLotTbody(lot, index));
+      });
 
       document.getElementById('label-tva').textContent = `TVA (${tva}%)`;
-      let totalHt = 0, montantTva = 0;
-      document.querySelectorAll('#devis-lignes tr').forEach(tr => {
-        const inputs = tr.querySelectorAll('input');
-        totalHt += (parseFloat(inputs[1].value) || 0) * (parseFloat(inputs[3].value) || 0);
+
+      // Calcul des totaux depuis les inputs (avant recalculerTotaux pour avoir les valeurs brutes)
+      let totalHt = 0;
+      (data.lots || []).forEach(lot => {
+        (lot.lignes || []).forEach(l => {
+          totalHt += (parseFloat(l.quantite) || 0) * (parseFloat(l.prix_unitaire_ht) || 0);
+        });
       });
-      montantTva = totalHt * devisTauxTva / 100;
-      const totalTtc = totalHt + montantTva;
-      document.getElementById('total-ht').textContent = fp(totalHt);
-      document.getElementById('total-tva').textContent = fp(montantTva);
-      document.getElementById('total-ttc').textContent = fp(totalTtc);
+      const totalTtc = totalHt * (1 + devisTauxTva / 100);
+      recalculerTotaux();
+
       document.getElementById('conditions-affichees').textContent = artisan.conditions ? 'Conditions de paiement : ' + artisan.conditions : 'Conditions de paiement : Chèque ou virement bancaire.';
 
       document.getElementById('section-formulaire').classList.add('hidden');
@@ -703,6 +840,9 @@
       document.getElementById('section-resultat').classList.add('hidden');
       document.getElementById('btn-recommencer').classList.add('hidden');
       document.getElementById('description').value = '';
+      // Vider les lots et remettre le toggle global en état initial
+      document.getElementById('devis-lots').innerHTML = '';
+      basculerVueGlobale('detaillee');
       mettreAJourCompteur(); avancerEtape(1);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }

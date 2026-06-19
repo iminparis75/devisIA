@@ -61,27 +61,32 @@ exports.handler = async (event) => {
   }
 
   // --- Appel Claude API ---
-  const prompt = `Tu es un expert en devis du bâtiment français. Un artisan décrit un chantier en langage naturel. Génère un devis structuré réaliste.
+  const prompt = `Tu es un expert en devis du bâtiment français. Un artisan décrit un chantier en langage naturel. Génère un devis structuré réaliste, organisé par lots.
 
 Description du chantier : "${description.trim()}"
 TVA applicable : ${tva}%
 
 Instructions :
-- Génère entre 3 et 8 lignes de devis
+- Crée entre 2 et 4 lots cohérents avec la nature du chantier (ex : "Lot 1 - Dépose et préparation", "Lot 2 - Fournitures", "Lot 3 - Main d'œuvre")
+- Chaque lot contient entre 2 et 4 lignes de détail
 - Prix unitaires cohérents avec le marché BTP français 2026
-- Sépare main d'oeuvre et fournitures si pertinent
 - Désignations précises et professionnelles
 - Unités possibles : forfait, m², ml, h, u, m³
 
 Retourne UNIQUEMENT ce JSON valide, sans texte ni bloc markdown :
 {
   "titre": "Devis [résumé du chantier en 4-6 mots]",
-  "lignes": [
+  "lots": [
     {
-      "designation": "Description précise",
-      "quantite": 1,
-      "unite": "forfait",
-      "prix_unitaire_ht": 150.00
+      "nom": "Lot 1 - Dépose et préparation",
+      "lignes": [
+        {
+          "designation": "Description précise",
+          "quantite": 1,
+          "unite": "forfait",
+          "prix_unitaire_ht": 150.00
+        }
+      ]
     }
   ]
 }`;
@@ -135,7 +140,12 @@ Retourne UNIQUEMENT ce JSON valide, sans texte ni bloc markdown :
     }
 
     // Valider la structure du JSON retourné
-    if (!devis.titre || !Array.isArray(devis.lignes) || devis.lignes.length === 0) {
+    if (
+      !devis.titre ||
+      !Array.isArray(devis.lots) ||
+      devis.lots.length === 0 ||
+      !devis.lots.every(lot => lot.nom && Array.isArray(lot.lignes) && lot.lignes.length > 0)
+    ) {
       return {
         statusCode: 502,
         headers: corsHeaders,

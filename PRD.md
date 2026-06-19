@@ -1,7 +1,7 @@
 # PRD — DevisIA MVP
 
 > Product Requirements Document
-> Rédigé le 2026-05-24 | Statut : Draft v1
+> Rédigé le 2026-05-24 | Mis à jour le 2026-06-19 | Statut : Draft v2
 
 ---
 
@@ -130,6 +130,25 @@ Même parcours, mais :
 - Connexion simple
 - Historique des devis : liste avec date, client, montant, bouton re-télécharger
 - Pas de gestion d'équipe, pas d'abonnement payant pour le MVP
+
+### F7 — Regroupement par lots avec vue client (Sprint 1)
+
+**Contexte :** Les artisans du bâtiment structurent leurs devis en "lots" (ex : Lot électricité, Lot peinture). Ils souhaitent souvent ne pas dévoiler le détail des lignes au client (pour protéger leurs marges), mais garder ce détail pour leur propre suivi.
+
+**Principe :** Présentation uniquement. La donnée complète (tous les lots, toutes les lignes) est toujours stockée en BDD Supabase et accessible depuis l'historique. Le masquage s'applique uniquement à l'affichage et à l'export PDF.
+
+**Fonctionnement :**
+- L'IA génère le devis structuré en lots (JSON : `lots[]` contenant des `lignes[]`)
+- Chaque lot affiche son sous-total HT
+- Toggle global "Vue client / Vue détaillée" : bascule tous les lots d'un coup
+- Toggle par lot : l'artisan peut affiner lot par lot (ex : Fournitures = détaillé, Main d'oeuvre = masqué)
+- En "Vue client" : seuls le nom du lot et son total apparaissent, les lignes sont masquées
+- L'export PDF respecte l'état d'affichage actif au moment du clic "Télécharger"
+
+**Changements techniques :**
+- `generer-devis.js` : nouveau schéma JSON avec `lots[]` à la place de `lignes[]` à plat
+- Frontend `afficherDevis()` : rendu par lot avec toggles individuels + toggle global
+- Export PDF : aucun changement de logique, html2pdf capture le HTML tel qu'affiché
 
 ---
 
