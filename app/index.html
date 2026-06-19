@@ -324,22 +324,14 @@
       <!-- Colonne d'en-tête du tableau (fixe, commune à tous les lots) -->
       <div class="overflow-x-auto">
         <table class="w-full text-sm table-fixed">
-          <colgroup>
-            <col />
-            <col style="width:4rem" />
-            <col style="width:5rem" />
-            <col style="width:5.5rem" />
-            <col style="width:6rem" />
-            <col class="no-print" style="width:2.5rem" />
-          </colgroup>
           <thead>
             <tr class="bg-chalk">
               <th class="text-left px-3 py-2 font-semibold text-ink rounded-tl-lg">Désignation</th>
-              <th class="text-center px-3 py-2 font-semibold text-ink">Qté</th>
-              <th class="text-center px-3 py-2 font-semibold text-ink">Unité</th>
-              <th class="text-right px-3 py-2 font-semibold text-ink">PU HT</th>
-              <th class="text-right px-3 py-2 font-semibold text-ink">Total HT</th>
-              <th class="no-print px-2 py-2 rounded-tr-lg"></th>
+              <th class="text-center px-3 py-2 font-semibold text-ink" style="width:4.5rem">Qté</th>
+              <th class="text-center px-3 py-2 font-semibold text-ink" style="width:5.5rem">Unité</th>
+              <th class="text-right px-3 py-2 font-semibold text-ink" style="width:6rem">PU HT</th>
+              <th class="text-right px-3 py-2 font-semibold text-ink" style="width:7rem">Total HT</th>
+              <th class="no-print px-2 py-2 rounded-tr-lg" style="width:2.5rem"></th>
             </tr>
           </thead>
           <!-- Les tbody des lots sont injectés ici par JS -->
@@ -388,9 +380,9 @@
       tr.className = 'lot-ligne hover:bg-orange-50 transition-colors';
       tr.innerHTML = `
         <td class="px-3 py-2 text-ink"><input type="text" class="input-inline" value="${escapeAttr(l.designation)}" oninput="recalculerTotaux()" /></td>
-        <td class="px-3 py-2 text-center text-muted"><input type="number" class="input-inline text-center" style="width:3.5rem" value="${qte}" min="0" step="any" oninput="recalculerTotaux()" /></td>
-        <td class="px-3 py-2 text-center text-muted"><input type="text" class="input-inline text-center" style="width:3.5rem" value="${escapeAttr(l.unite)}" oninput="recalculerTotaux()" /></td>
-        <td class="px-3 py-2 text-right text-muted"><input type="number" class="input-inline text-right" style="width:5rem" value="${pu}" min="0" step="0.01" oninput="recalculerTotaux()" /></td>
+        <td class="px-3 py-2 text-center text-muted"><input type="number" class="input-inline text-center w-full" value="${qte}" min="0" step="any" oninput="recalculerTotaux()" /></td>
+        <td class="px-3 py-2 text-center text-muted"><input type="text" class="input-inline text-center w-full" value="${escapeAttr(l.unite)}" oninput="recalculerTotaux()" /></td>
+        <td class="px-3 py-2 text-right text-muted"><input type="number" class="input-inline text-right w-full" value="${pu}" min="0" step="0.01" oninput="recalculerTotaux()" /></td>
         <td class="px-3 py-2 text-right font-medium text-ink montant-ligne">${fp(qte * pu)}</td>
         <td class="no-print px-2 py-2 text-center"><button onclick="supprimerLigne(this)" class="text-muted hover:text-red-500 transition text-xl leading-none font-light" title="Supprimer la ligne">&times;</button></td>
       `;
