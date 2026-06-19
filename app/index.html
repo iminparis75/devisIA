@@ -50,6 +50,11 @@
     .toggle-pill button { padding: 0.35rem 0.85rem; font-size: 0.75rem; font-weight: 500; transition: background 0.15s, color 0.15s; white-space: nowrap; }
     .toggle-pill button.actif { background: #1a1a1a; color: white; }
     .toggle-pill button:not(.actif) { color: #6b7280; }
+    /* Ligne résumé vue client — masquée par défaut, visible uniquement en mode vue-client */
+    .lot-client-summary { display: none; }
+    .lot-client-summary.vue-client { display: table-row; }
+    /* Sous-total masqué en vue-client (remplacé par la ligne résumé) */
+    .lot-subtotal.vue-client { display: none; }
   </style>
 </head>
 <body class="min-h-screen">
@@ -297,7 +302,7 @@
         <button id="btn-vue-detaillee" onclick="basculerVueGlobale('detaillee')" class="actif">Vue détaillée</button>
         <button id="btn-vue-client" onclick="basculerVueGlobale('client')">Vue client</button>
       </div>
-      <p class="text-xs text-muted">La vue client masque le détail des lignes par lot.</p>
+      <p class="text-xs text-muted">La vue client affiche une ligne synthèse par lot (sans le détail ni les prix unitaires).</p>
     </div>
 
     <div id="devis-pdf" class="card p-8 space-y-6">
@@ -442,6 +447,20 @@
       `;
       frag.appendChild(trAjouter);
 
+      // Ligne résumé vue client (masquée par défaut)
+      const trResume = document.createElement('tr');
+      trResume.className = 'lot-client-summary';
+      trResume.dataset.lot = lotIndex;
+      trResume.innerHTML = `
+        <td class="px-3 py-2 text-ink align-top text-sm lot-resume-designation" style="word-break:break-word;"></td>
+        <td class="px-3 py-2 text-center text-muted">1</td>
+        <td class="px-3 py-2 text-center text-muted">forfait</td>
+        <td class="px-3 py-2 text-right text-muted"></td>
+        <td class="px-3 py-2 text-right font-medium text-ink lot-resume-total"></td>
+        <td class="no-print px-2"></td>
+      `;
+      frag.appendChild(trResume);
+
       // Sous-total du lot
       const trSousTotal = document.createElement('tr');
       trSousTotal.className = 'lot-subtotal';
@@ -484,6 +503,25 @@
       document.getElementById('total-ttc').textContent = fp(totalHtGlobal + montantTva);
     }
 
+    // Met à jour le contenu de la ligne résumé d'un lot (option C : nom + descriptifs)
+    function mettreAJourResumeLot(lotIndex) {
+      const trResume = document.querySelector(`#devis-lots .lot-client-summary[data-lot="${lotIndex}"]`);
+      if (!trResume) return;
+      const headerInput = document.querySelector(`#devis-lots .lot-header[data-lot="${lotIndex}"] input`);
+      const nomLot = headerInput ? headerInput.value.trim() : '';
+      const designations = [];
+      document.querySelectorAll(`#devis-lots .lot-ligne[data-lot="${lotIndex}"] textarea`).forEach(ta => {
+        const v = ta.value.trim();
+        if (v) designations.push(v);
+      });
+      const designationText = nomLot && designations.length
+        ? `${nomLot} : ${designations.join(', ')}`
+        : (nomLot || designations.join(', '));
+      trResume.querySelector('.lot-resume-designation').textContent = designationText;
+      const cellSousTotal = document.querySelector(`#devis-lots .lot-subtotal[data-lot="${lotIndex}"] .sous-total-lot`);
+      trResume.querySelector('.lot-resume-total').textContent = cellSousTotal ? cellSousTotal.textContent : '';
+    }
+
     function supprimerLigne(btn) {
       btn.closest('tr').remove();
       recalculerTotaux();
@@ -509,6 +547,12 @@
       const estClient = !lignes[0].classList.contains('vue-client');
       lignes.forEach(tr => tr.classList.toggle('vue-client', estClient));
       document.querySelectorAll(`#devis-lots .lot-ajouter[data-lot="${lotIndex}"]`).forEach(tr => tr.classList.toggle('vue-client', estClient));
+      document.querySelectorAll(`#devis-lots .lot-subtotal[data-lot="${lotIndex}"]`).forEach(tr => tr.classList.toggle('vue-client', estClient));
+      const trResume = document.querySelector(`#devis-lots .lot-client-summary[data-lot="${lotIndex}"]`);
+      if (trResume) {
+        trResume.classList.toggle('vue-client', estClient);
+        if (estClient) mettreAJourResumeLot(lotIndex);
+      }
       btn.querySelector('.oeil-ouvert').classList.toggle('hidden', estClient);
       btn.querySelector('.oeil-ferme').classList.toggle('hidden', !estClient);
       syncToggleGlobal();
@@ -520,6 +564,18 @@
       document.querySelectorAll('#devis-lots .lot-ligne, #devis-lots .lot-ajouter').forEach(tr => {
         tr.classList.toggle('vue-client', estClient);
       });
+      document.querySelectorAll('#devis-lots .lot-subtotal').forEach(tr => {
+        tr.classList.toggle('vue-client', estClient);
+      });
+      document.querySelectorAll('#devis-lots .lot-client-summary').forEach(tr => {
+        tr.classList.toggle('vue-client', estClient);
+      });
+      if (estClient) {
+        const lotsIndex = new Set(
+          Array.from(document.querySelectorAll('#devis-lots .lot-ligne[data-lot]')).map(tr => tr.dataset.lot)
+        );
+        lotsIndex.forEach(lotIndex => mettreAJourResumeLot(lotIndex));
+      }
       document.querySelectorAll('#devis-lots .lot-header button[data-lot-index]').forEach(btn => {
         btn.querySelector('.oeil-ouvert').classList.toggle('hidden', estClient);
         btn.querySelector('.oeil-ferme').classList.toggle('hidden', !estClient);
