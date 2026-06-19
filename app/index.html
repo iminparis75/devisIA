@@ -323,7 +323,15 @@
       <p id="devis-titre" class="font-semibold text-ink"></p>
       <!-- Colonne d'en-tête du tableau (fixe, commune à tous les lots) -->
       <div class="overflow-x-auto">
-        <table class="w-full text-sm">
+        <table class="w-full text-sm table-fixed">
+          <colgroup>
+            <col />
+            <col style="width:4rem" />
+            <col style="width:5rem" />
+            <col style="width:5.5rem" />
+            <col style="width:6rem" />
+            <col class="no-print" style="width:2.5rem" />
+          </colgroup>
           <thead>
             <tr class="bg-chalk">
               <th class="text-left px-3 py-2 font-semibold text-ink rounded-tl-lg">Désignation</th>
