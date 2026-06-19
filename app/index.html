@@ -813,10 +813,13 @@
         conteneurLots.appendChild(creerLotRows(lot, index));
       });
 
-      // Initialiser la hauteur de chaque textarea désignation
-      conteneurLots.querySelectorAll('textarea.input-inline').forEach(ta => {
-        ta.style.height = 'auto';
-        ta.style.height = ta.scrollHeight + 'px';
+      // Initialiser la hauteur des textareas après rendu (requestAnimationFrame garantit
+      // que le navigateur a calculé la largeur des colonnes avant de mesurer scrollHeight)
+      requestAnimationFrame(() => {
+        conteneurLots.querySelectorAll('textarea.input-inline').forEach(ta => {
+          ta.style.height = 'auto';
+          ta.style.height = ta.scrollHeight + 'px';
+        });
       });
 
       document.getElementById('label-tva').textContent = `TVA (${tva}%)`;
