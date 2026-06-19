@@ -458,8 +458,8 @@
         let sousTotal = 0;
         tbody.querySelectorAll('.lot-ligne').forEach(tr => {
           const inputs = tr.querySelectorAll('input');
-          const qte = parseFloat(inputs[1].value) || 0;
-          const pu = parseFloat(inputs[3].value) || 0;
+          const qte = parseFloat(inputs[0].value) || 0;
+          const pu = parseFloat(inputs[2].value) || 0;
           const montant = qte * pu;
           sousTotal += montant;
           tr.querySelector('.montant-ligne').textContent = fp(montant);
@@ -760,7 +760,12 @@
         btn.className = 'w-full sm:w-auto sm:min-w-64 px-8 py-4 rounded-xl font-semibold text-base bg-orange-500 text-white opacity-80 cursor-wait';
         document.getElementById('btn-texte').innerHTML = `<span class="flex items-center justify-center gap-2"><svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>Génération en cours...</span>`;
         avancerEtape(2);
-      } else { avancerEtape(1); }
+      } else {
+        btn.disabled = false;
+        btn.className = 'w-full sm:w-auto sm:min-w-64 px-8 py-4 rounded-xl font-semibold text-base bg-orange-600 hover:bg-orange-700 text-white transition-colors';
+        document.getElementById('btn-texte').innerHTML = 'Générer le devis';
+        avancerEtape(1);
+      }
     }
 
     // AFFICHAGE DEVIS
