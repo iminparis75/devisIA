@@ -19,13 +19,14 @@ Générateur de devis IA pour artisans du bâtiment (projet fil rouge ESCP, doub
 
 ## Fichiers en cours de modification
 
-Aucun. Dernière session de code terminée et déployée (Sprint 2, commit F7).
+`index.html`, `netlify/functions/generer-devis.js`, `.env.example` : ajout d'une protection anti-bot (Cloudflare Turnstile) sur le formulaire de génération, pas encore testé ni déployé.
 
 ## Ce qui a changé depuis le début
 
 - Sprint 1 : refactorisation de `afficherDevis()` avec inputs éditables, protection XSS (`escapeAttr`), rendu PDF propre (classe `pdf-mode`).
 - Sprint 2 : nouveau schéma JSON `lots[]` dans `generer-devis.js` (max_tokens porté à 2048), toggle global et par lot, export PDF qui respecte l'état d'affichage.
 - Renumérotation des sprints pour démarrer à 1 (au lieu de 0), backlog construit en epics/user stories pour les Sprints 1 et 2.
+- Protection Cloudflare Turnstile ajoutée sur le formulaire de génération (widget géré "Managed" dans `index.html`, vérification du token côté serveur dans `generer-devis.js` avant l'appel à Claude). Objectif : empêcher un bot de spammer l'endpoint payant. Site key en dur dans le HTML (publique par design), secret key configurée sur Netlify (`TURNSTILE_SECRET_KEY`, contexte production uniquement pour l'instant).
 
 ## Ce qui a été testé et n'a pas marché
 
@@ -33,4 +34,5 @@ Aucun. Dernière session de code terminée et déployée (Sprint 2, commit F7).
 
 ## Ce qu'il comptait faire ensuite
 
-Démarrer le Sprint 3 (duplication/versioning de devis) : appliquer la migration Supabase (`parent_id`, `version`), puis construire le bouton de duplication et la logique de versioning sur l'app.
+- Tester le flux Turnstile une fois déployé (génération d'un devis en conditions réelles, vérifier que le widget ne bloque pas la démo ESCP).
+- Démarrer le Sprint 3 (duplication/versioning de devis) : appliquer la migration Supabase (`parent_id`, `version`), puis construire le bouton de duplication et la logique de versioning sur l'app.

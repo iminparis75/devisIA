@@ -8,6 +8,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -272,6 +273,7 @@
 
     <!-- BOUTON -->
     <div class="flex flex-col items-center gap-3 pb-8">
+      <div class="cf-turnstile" data-sitekey="0x4AAAAAADrlgo1wt7iF_7yG"></div>
       <button id="btn-generer" disabled onclick="genererDevis()"
         class="w-full sm:w-auto sm:min-w-64 px-8 py-4 rounded-xl font-semibold text-base transition-all duration-200 bg-line text-muted cursor-not-allowed">
         <span id="btn-texte">Décrivez votre chantier d'abord</span>
@@ -800,12 +802,13 @@
         conditions: document.getElementById('conditions').value.trim(),
       };
       const client = { nom: document.getElementById('client-nom').value.trim(), ville: document.getElementById('client-ville').value.trim() };
+      const turnstileToken = document.querySelector('[name="cf-turnstile-response"]')?.value || '';
 
       setChargement(true); cacherErreur();
       try {
         const res = await fetch('/.netlify/functions/generer-devis', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ description, tva, artisan, client })
+          body: JSON.stringify({ description, tva, artisan, client, turnstileToken })
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Erreur serveur');
@@ -815,6 +818,8 @@
       } catch (err) {
         setChargement(false);
         afficherErreur(err.message || 'Une erreur est survenue. Réessayez.');
+      } finally {
+        if (window.turnstile) turnstile.reset();
       }
     }
 

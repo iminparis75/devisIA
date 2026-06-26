@@ -45,7 +45,7 @@ exports.handler = async (event) => {
     return { statusCode: 400, headers: corsHeaders, body: JSON.stringify({ error: 'Corps de la requête invalide.' }) };
   }
 
-  const { description, tva } = body;
+  const { description, tva, turnstileToken } = body;
 
   if (!description || typeof description !== 'string') {
     return { statusCode: 400, headers: corsHeaders, body: JSON.stringify({ error: 'La description du chantier est requise.' }) };
@@ -58,6 +58,20 @@ exports.handler = async (event) => {
   }
   if (!tva || ![10, 20].includes(Number(tva))) {
     return { statusCode: 400, headers: corsHeaders, body: JSON.stringify({ error: 'Taux de TVA invalide (10 ou 20 acceptés).' }) };
+  }
+
+  // --- Vérification anti-bot Cloudflare Turnstile ---
+  if (!turnstileToken) {
+    return { statusCode: 400, headers: corsHeaders, body: JSON.stringify({ error: 'Vérification anti-bot manquante. Rechargez la page et réessayez.' }) };
+  }
+  const turnstileRes = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: `secret=${process.env.TURNSTILE_SECRET_KEY}&response=${turnstileToken}`
+  });
+  const turnstileData = await turnstileRes.json();
+  if (!turnstileData.success) {
+    return { statusCode: 403, headers: corsHeaders, body: JSON.stringify({ error: 'Vérification anti-bot échouée. Rechargez la page et réessayez.' }) };
   }
 
   // --- Appel Claude API ---
