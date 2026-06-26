@@ -3,3 +3,6 @@
 
 # Variables d'environnement — ne jamais commiter
 .env
+
+# Artefact généré par Netlify CLI (émulation Deno des Edge Functions)
+deno.lock

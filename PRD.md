@@ -131,7 +131,7 @@ Même parcours, mais :
 - Historique des devis : liste avec date, client, montant, bouton re-télécharger
 - Pas de gestion d'équipe, pas d'abonnement payant pour le MVP
 
-### F7 — Regroupement par lots avec vue client (Sprint 1)
+### F7 — Regroupement par lots avec vue client (Sprint 2)
 
 **Contexte :** Les artisans du bâtiment structurent leurs devis en "lots" (ex : Lot électricité, Lot peinture). Ils souhaitent souvent ne pas dévoiler le détail des lignes au client (pour protéger leurs marges), mais garder ce détail pour leur propre suivi.
 
